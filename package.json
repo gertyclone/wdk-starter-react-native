@@ -87,6 +87,7 @@
   "devDependencies": {
     "@types/b4a": "^1.6.5",
     "@types/react": "~19.1.0",
+    "bufferutil": "^4.0.9",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "eslint-config-prettier": "^10.1.8",
@@ -94,7 +95,8 @@
     "prettier": "^3.6.2",
     "react-native-svg-transformer": "^1.5.1",
     "sharp-cli": "^5.2.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "utf-8-validate": "^5.0.10"
   },
   "peerDependencies": {
     "react": "19.1.0",
