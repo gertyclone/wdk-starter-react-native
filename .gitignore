@@ -45,3 +45,6 @@ app-example
 
 .env
 .npmrc
+
+NOTES.md
+
