@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import getChainsConfig from '@/config/get-chains-config';
@@ -27,7 +27,13 @@ export default function RootLayout() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        await WDKService.initialize();
+        // WDK requires native worklets (BareKit) which don't work on web
+        // Skip initialization on web platform
+        if (Platform.OS !== 'web') {
+          await WDKService.initialize();
+        } else {
+          console.warn('WDK initialization skipped on web platform - native worklets not available');
+        }
       } catch (error) {
         console.error('Failed to initialize services in app layout:', error);
       } finally {

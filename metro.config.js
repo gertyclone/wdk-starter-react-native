@@ -39,8 +39,65 @@ wdkConfig.resolver.resolveRequest = (context, moduleName, platform) => {
     }
   }
 
+  // Handle react-native-bare-kit web shim for web platform
+  if (platform === 'web') {
+    // Handle main module
+    if (moduleName === 'react-native-bare-kit') {
+      const shimPath = path.resolve(__dirname, 'src/shims/react-native-bare-kit.web.ts');
+      try {
+        return {
+          type: 'sourceFile',
+          filePath: shimPath,
+        };
+      } catch (e) {
+        // Fall through to default resolution
+      }
+    }
+    // Handle react-native-bare-kit/specs/NativeBareKit path (absolute or relative)
+    if (moduleName === 'react-native-bare-kit/specs/NativeBareKit' || 
+        moduleName.includes('react-native-bare-kit/specs/NativeBareKit') ||
+        (moduleName === './specs/NativeBareKit' && context.originModulePath && 
+         context.originModulePath.includes('react-native-bare-kit'))) {
+      const shimPath = path.resolve(__dirname, 'src/shims/react-native-bare-kit-specs-NativeBareKit.web.ts');
+      try {
+        return {
+          type: 'sourceFile',
+          filePath: shimPath,
+        };
+      } catch (e) {
+        // Fall through to default resolution
+      }
+    }
+    // Handle url module for axios on web
+    if (moduleName === 'url') {
+      const shimPath = path.resolve(__dirname, 'src/shims/url.web.ts');
+      try {
+        return {
+          type: 'sourceFile',
+          filePath: shimPath,
+        };
+      } catch (e) {
+        // Fall through to default resolution
+      }
+    }
+  }
+
   // Delegate to WDK's resolveRequest
-  return wdkResolveRequest(context, moduleName, platform);
+  const result = wdkResolveRequest(context, moduleName, platform);
+  
+  // If we got a result for web and it's trying to load react-native-bare-kit/specs/NativeBareKit, override it
+  if (platform === 'web' && result && result.type === 'sourceFile') {
+    const filePath = result.filePath || '';
+    if (filePath.includes('react-native-bare-kit/specs/NativeBareKit')) {
+      const shimPath = path.resolve(__dirname, 'src/shims/react-native-bare-kit-specs-NativeBareKit.web.ts');
+      return {
+        type: 'sourceFile',
+        filePath: shimPath,
+      };
+    }
+  }
+  
+  return result;
 };
 
 module.exports = wdkConfig;
