@@ -59,8 +59,9 @@ const getChainsConfig = () => {
       transferMaxFee: 1000000000,
     },
     bitcoin: {
-      host: 'api.ordimint.com',
-      port: 50001,
+      network: 'testnet',
+      host: '192.168.1.111',
+      port: 60001,
     },
     tron: {
       chainId: 3448148188,
