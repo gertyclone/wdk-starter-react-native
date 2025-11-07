@@ -59,8 +59,10 @@ const getChainsConfig = () => {
       transferMaxFee: 1000000000,
     },
     bitcoin: {
-      host: 'api.ordimint.com',
-      port: 50001,
+      network: 'testnet',
+      host: '192.168.1.111',
+      port: 40001,
+      bip: 84, // Use BIP84 for native SegWit (m/84') addresses instead of BIP44 (m/44')
     },
     tron: {
       chainId: 3448148188,

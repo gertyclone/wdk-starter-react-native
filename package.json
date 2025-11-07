@@ -5,6 +5,8 @@
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
+    "android:build": "expo run:android --variant release",
+    "android:bundle": "cd android && ./gradlew bundleRelease",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
@@ -12,6 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "gen:bundle": "npm --prefix node_modules/@tetherto/pear-wrk-wdk run gen:mobile-bundle",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean"
   },
@@ -29,6 +32,7 @@
     "@tetherto/wdk-pricing-provider": "^1.0.0-beta.1",
     "@tetherto/wdk-react-native-provider": "^1.0.0-beta.3",
     "@tetherto/wdk-uikit-react-native": "^1.0.0-beta.2",
+    "@ton/core": "^0.62.0",
     "b4a": "^1.7.2",
     "bip39": "^3.1.0",
     "browserify-zlib": "^0.2.0",
