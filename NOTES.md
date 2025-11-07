@@ -15,3 +15,20 @@ npm install --legacy-peer-deps
 
 // Create the .env file for INDEXER_API_KEY and TRON_API_KEY and TRON_API_SECRET
 
+npm run prebuild:clean
+cd ios && pod install
+cd ..
+cd android && ./gradlew clean
+
+// Note that building for web doesn't seem to work
+
+// Build for android release
+npm run android:release
+
+// Build for android debug
+npm run android:debug
+
+// Adjusted to use local pear-wrk-wdk package
+
+npx expo start --clear
+
