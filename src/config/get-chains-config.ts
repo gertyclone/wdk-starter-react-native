@@ -61,7 +61,8 @@ const getChainsConfig = () => {
     bitcoin: {
       network: 'testnet',
       host: '192.168.1.111',
-      port: 60001,
+      port: 40001,
+      bip: 84, // Use BIP84 for native SegWit (m/84') addresses instead of BIP44 (m/44')
     },
     tron: {
       chainId: 3448148188,
