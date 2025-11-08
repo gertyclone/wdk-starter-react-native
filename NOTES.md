@@ -19,14 +19,15 @@ npm run prebuild:clean
 cd ios && pod install
 cd ..
 cd android && ./gradlew clean
+cd ..
 
 // Note that building for web doesn't seem to work
 
-// Build for android release
-npm run android:release
-
 // Build for android debug
 npm run android:debug
+
+// Build for android release
+npm run android:release
 
 // Adjusted to use local pear-wrk-wdk package
 
