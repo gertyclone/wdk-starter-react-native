@@ -15,6 +15,9 @@ npm install --legacy-peer-deps
 
 // Create the .env file for INDEXER_API_KEY and TRON_API_KEY and TRON_API_SECRET
 
+// Note if Gradle locks up
+cd android && ./gradlew --stop && cd ..
+
 npm run prebuild:clean
 cd ios && pod install
 cd ..
@@ -26,7 +29,7 @@ cd ..
 // Build for android debug
 npm run android:debug
 
-// Build for android release
+// Build for android release (do this first to make sure the bundler cache is ready?)
 npm run android:release
 
 // Adjusted to use local pear-wrk-wdk package
