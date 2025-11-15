@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "gen:bundle": "npm --prefix node_modules/@tetherto/pear-wrk-wdk run gen:mobile-bundle",
     "prebuild": "expo prebuild",
-    "prebuild:clean": "expo prebuild --clean"
+    "prebuild:clean": "expo prebuild --clean",
+    "postinstall": "node scripts/postinstall-pear-wrk-wdk.js"
   },
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.0",
@@ -102,5 +103,8 @@
   "peerDependencies": {
     "react": "19.1.0",
     "react-native": "0.81.4"
+  },
+  "overrides": {
+    "@wdk/wallet-btc": "git+https://github.com/spacesops/wdk-wallet-btc.git#taproot"
   }
 }
