@@ -15,7 +15,11 @@
     "gen:bundle": "npm --prefix node_modules/@tetherto/pear-wrk-wdk run gen:mobile-bundle",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean",
-    "postinstall": "node scripts/postinstall-pear-wrk-wdk.js"
+    "postinstall": "node scripts/postinstall-pear-wrk-wdk.js",
+    "build:android:apk": "npm run gen:bundle && cd android && ./gradlew assembleRelease",
+    "build:android:apk:clean": "npm run gen:bundle && cd android && ./gradlew clean assembleRelease",
+    "build:android:apk:install": "npm run build:android:apk && adb install -r android/app/build/outputs/apk/release/app-release.apk && adb shell am start -n com.gammastream.wdkstarterreactnative/.MainActivity",
+    "install:android:apk": "adb install -r android/app/build/outputs/apk/release/app-release.apk && adb shell am start -n com.gammastream.wdkstarterreactnative/.MainActivity"
   },
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.0",
