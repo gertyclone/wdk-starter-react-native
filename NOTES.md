@@ -6,6 +6,10 @@ npm install --legacy-peer-deps
 
 .env
 
+rm -rf android
+
+npm run prebuild:clean
+
 npm run gen:bundle
 
 npm run android
