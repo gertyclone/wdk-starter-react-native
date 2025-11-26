@@ -6,11 +6,13 @@ npm install --legacy-peer-deps
 
 .env
 
-rm -rf android
+rm -rf android && rm -rf ios
 
 npm run prebuild:clean
 
 npm run gen:bundle
+
+// Check md5 hash of the wdk-worklet.mobile.bundle.js file
 
 npm run android
 
