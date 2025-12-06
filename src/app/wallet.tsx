@@ -139,7 +139,7 @@ export default function WalletScreen() {
       icon: Star,
       title: 'Star repo on GitHub',
       color: colors.primary,
-      url: 'https://github.com/tetherto/wdk-starter-react-native',
+      url: 'https://github.com/spacesops/wdk-starter-react-native',
     },
     {
       id: 2,
