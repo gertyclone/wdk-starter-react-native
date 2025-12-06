@@ -69,7 +69,7 @@ const getChainsConfig = () => {
       host: '192.168.1.110',
       port: 50001,
       // bip: 84, // Use BIP84 for native SegWit (m/84') addresses instead of BIP44 (m/44')
-      script_type: 'P2TR'
+      script_type: 'P2TR',
     },
     // tron: {
     //   chainId: 3448148188,

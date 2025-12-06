@@ -4,7 +4,8 @@ nvm use v22.21.1
 
 "@ton/core": "^0.62.0",
 
-npm install --legacy-peer-deps --ignore-scripts
+npm install --legacy-peer-deps 
+npm install --ignore-scripts
 
 .env
 
@@ -35,6 +36,11 @@ https://developer.android.com/studio/run/device.html#developer-device-options. I
 md5 node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js
 
 MD5 (node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js) = 7d11848886d21462fe7bec9a5ae855c5
+
+// SpacesOps Bundle Hash
+md5 node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js
+MD5 (node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js) = f524812dba88534849e0f0384a9fadd2
+
 
 ls -lh node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js
 -rw-r--r--@ 1 i830671  staff    18M Nov  8 19:54 node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js

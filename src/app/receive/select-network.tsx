@@ -21,8 +21,8 @@ const NETWORK_DESCRIPTIONS = {
   [NetworkType.POLYGON]: 'Polygon Network',
   [NetworkType.ARBITRUM]: 'Arbitrum One',
   [NetworkType.TON]: 'TON Network',
-  [NetworkType.TRON]: 'Tron Network',
-  [NetworkType.SOLANA]: 'Solana Network',
+  // [NetworkType.TRON]: 'Tron Network',
+  // [NetworkType.SOLANA]: 'Solana Network',
   [NetworkType.SEGWIT]: 'Native Bitcoin Network',
   [NetworkType.LIGHTNING]: 'Lightning Network',
 };

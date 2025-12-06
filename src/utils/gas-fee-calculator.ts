@@ -17,8 +17,8 @@ const QUOTE_RECIPIENTS = {
       [NetworkType.POLYGON]: '0x8d42eb95360bf68d65e5a810986b2ebd88c5e606',
       [NetworkType.ARBITRUM]: '0x8d42eb95360bf68d65e5a810986b2ebd88c5e606',
       [NetworkType.TON]: 'EQD5mxRgCuRNLxKxeOjG6r14iSroLF5FtomPnet-sgP5xNJb',
-      [NetworkType.TRON]: 'TLDCVJBtvYXJb2fEEk5pPoApHZbyuf2TyG',
-      [NetworkType.SOLANA]: '74xb5G9LTr1J45HPcLqz6VF4NHVQtRqrTDD1MQ8D7zer',
+      // [NetworkType.TRON]: 'TLDCVJBtvYXJb2fEEk5pPoApHZbyuf2TyG',
+      // [NetworkType.SOLANA]: '74xb5G9LTr1J45HPcLqz6VF4NHVQtRqrTDD1MQ8D7zer',
     },
   },
   [AssetTicker.XAUT]: {
@@ -40,8 +40,8 @@ export const getNetworkType = (networkId: string): NetworkType => {
     bitcoin: NetworkType.SEGWIT,
     lightning: NetworkType.LIGHTNING,
     ton: NetworkType.TON,
-    tron: NetworkType.TRON,
-    solana: NetworkType.SOLANA,
+    // tron: NetworkType.TRON,
+    // solana: NetworkType.SOLANA,
   };
   return networkMap[networkId] || NetworkType.ETHEREUM;
 };
