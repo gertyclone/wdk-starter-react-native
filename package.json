@@ -13,6 +13,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "gen:bundle": "npm --prefix node_modules/@spacesops/pear-wrk-wdk run gen:mobile-bundle",
+    "postinstall": "node scripts/fix-secret-manager-bundle.js",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean"
   },
