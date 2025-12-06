@@ -1,3 +1,5 @@
+https://docs.wallet.tether.io/start-building/react-native-quickstart
+
 nvm use v22.21.1
 
 "@ton/core": "^0.62.0",
@@ -51,3 +53,25 @@ Adding --imports pack.imports.json to the gen:secret-manager-bundle script and i
 Next steps:
 The postinstall script (scripts/fix-secret-manager-bundle.js) will automatically apply this fix after future npm install operations, so the configuration persists.
 The crash is resolved. The app should work normally now.
+
+Ways to watch Expo JavaScript logs:
+Method 1: Using the script (easiest)
+Run:
+./scripts/watch-android-logs.sh
+This filters and shows React Native JS logs in real time.
+Method 2: Direct adb logcat command
+In a terminal, run:
+adb logcat ReactNativeJS:V ReactNative:V chromium:V *:S
+Or for all JS-related logs:
+adb logcat | grep -E '(ReactNativeJS|console|JS)'
+Method 3: Expo Dev Server (if running)
+If you have npm start or expo start --dev-client running, it should show console.log output in that terminal. Ensure the device is connected to the dev server.
+Method 4: Chrome DevTools (for debugging)
+Shake the device or run:
+   adb shell input keyevent 82
+Select "Debug" → "Open Chrome DevTools"
+Open Chrome DevTools to see console logs
+Method 5: More detailed filtering
+For comprehensive logs including your app's console output:
+adb logcat | grep -E '(ReactNativeJS|console|wdk|worklet|bare)'
+The script (./scripts/watch-android-logs.sh) is ready to use. It filters for React Native JS logs and shows them in real time.

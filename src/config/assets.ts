@@ -33,14 +33,15 @@ export const assetConfig: Record<string, AssetConfig> = {
     symbol: 'USD₮',
     icon: require('../../assets/images/tokens/tether-usdt-logo.png'),
     color: '#ffffff',
-    supportedNetworks: [
-      NetworkType.ETHEREUM,
-      NetworkType.POLYGON,
-      NetworkType.ARBITRUM,
-      NetworkType.TON,
-      NetworkType.TRON,
-      NetworkType.SOLANA,
-    ],
+    supportedNetworks: [NetworkType.ETHEREUM],
+    // supportedNetworks: [
+    //   NetworkType.ETHEREUM,
+    //   NetworkType.POLYGON,
+    //   NetworkType.ARBITRUM,
+    //   NetworkType.TON,
+    //   NetworkType.TRON,
+    //   NetworkType.SOLANA,
+    // ],
   },
   xaut: {
     name: 'XAU₮',
