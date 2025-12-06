@@ -42,14 +42,14 @@ export const networkConfigs: Record<NetworkType, Network> = {
     icon: require('../../assets/images/chains/ton-logo.png'),
     color: '#0088CC',
   },
-  [NetworkType.TRON]: {
-    id: 'tron',
-    name: 'Tron',
-    gasLevel: 'Low',
-    gasColor: '#34C759',
-    icon: require('../../assets/images/chains/tron-trx-logo.png'),
-    color: '#FF060A',
-  },
+  // [NetworkType.TRON]: {
+  //   id: 'tron',
+  //   name: 'Tron',
+  //   gasLevel: 'Low',
+  //   gasColor: '#34C759',
+  //   icon: require('../../assets/images/chains/tron-trx-logo.png'),
+  //   color: '#FF060A',
+  // },
   [NetworkType.SOLANA]: {
     id: 'solana',
     name: 'Solana',

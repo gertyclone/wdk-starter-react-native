@@ -3,7 +3,9 @@ const getChainsConfig = () => {
     ethereum: {
       chainId: 1,
       blockchain: 'ethereum',
-      provider: 'https://eth.merkle.io',
+      // Using LlamaRPC as primary provider (fast, reliable, free)
+      // Alternatives: https://ethereum.publicnode.com, https://1rpc.io/eth
+      provider: 'https://eth.llamarpc.com',
       bundlerUrl: 'https://api.candide.dev/public/v3/ethereum',
       paymasterUrl: 'https://api.candide.dev/public/v3/ethereum',
       paymasterAddress: '0x8b1f6cb5d062aa2ce8d581942bbb960420d875ba',
@@ -58,25 +60,32 @@ const getChainsConfig = () => {
       },
       transferMaxFee: 1000000000,
     },
+    // bitcoin: {
+    //   host: 'api.ordimint.com',
+    //   port: 50001,
+    // },
     bitcoin: {
-      host: 'api.ordimint.com',
+      network: 'bitcoin',
+      host: '192.168.1.110',
       port: 50001,
+      // bip: 84, // Use BIP84 for native SegWit (m/84') addresses instead of BIP44 (m/44')
+      script_type: 'P2TR'
     },
-    tron: {
-      chainId: 3448148188,
-      provider: 'https://trongrid.io',
-      gasFreeProvider: 'https://gasfree.io',
-      apiKey: process.env.EXPO_PUBLIC_TRON_API_KEY!,
-      apiSecret: process.env.EXPO_PUBLIC_TRON_API_SECRET!,
-      serviceProvider: 'TKtWbdzEq5ss9vTS9kwRhBp5mXmBfBns3E',
-      verifyingContract: 'THQGuFzL87ZqhxkgqYEryRAd7gqFqL5rdc',
-      transferMaxFee: 10000000,
-      swapMaxFee: 1000000,
-      bridgeMaxFee: 1000000,
-      paymasterToken: {
-        address: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
-      },
-    },
+    // tron: {
+    //   chainId: 3448148188,
+    //   provider: 'https://trongrid.io',
+    //   gasFreeProvider: 'https://gasfree.io',
+    //   apiKey: process.env.EXPO_PUBLIC_TRON_API_KEY!,
+    //   apiSecret: process.env.EXPO_PUBLIC_TRON_API_SECRET!,
+    //   serviceProvider: 'TKtWbdzEq5ss9vTS9kwRhBp5mXmBfBns3E',
+    //   verifyingContract: 'THQGuFzL87ZqhxkgqYEryRAd7gqFqL5rdc',
+    //   transferMaxFee: 10000000,
+    //   swapMaxFee: 1000000,
+    //   bridgeMaxFee: 1000000,
+    //   paymasterToken: {
+    //     address: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
+    //   },
+    // },
   };
 };
 
