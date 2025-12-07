@@ -111,7 +111,7 @@ export default function ScanQRScreen() {
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <X size={24} color="#FF6501" />
+          <X size={24} color="#AA4981" />
         </TouchableOpacity>
       </View>
 

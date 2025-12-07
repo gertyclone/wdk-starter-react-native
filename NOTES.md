@@ -1,4 +1,16 @@
 https://docs.wallet.tether.io/start-building/react-native-quickstart
+# #9B2A6B
+# #B45F90
+Slightly lighter (15% lighter):
+#AA4981 — subtle lightening
+Moderately lighter (25% lighter):
+#B45F90 — balanced
+More lighter (35% lighter):
+#BE749E — noticeably lighter
+Much lighter (45% lighter):
+#C889AD — very light
+
+# #FF6501
 
 nvm use v22.21.1
 

@@ -39,9 +39,9 @@
     "splash": {
       "image": "./assets/images/splash-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF6501",
+      "backgroundColor": "#AA4981",
       "dark": {
-        "backgroundColor": "#FF6501"
+        "backgroundColor": "#AA4981"
       }
     },
     "userInterfaceStyle": "light",
@@ -54,7 +54,7 @@
           "image": "./assets/images/splash-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#FF6501"
+          "backgroundColor": "#AA4981"
         }
       ],
       [

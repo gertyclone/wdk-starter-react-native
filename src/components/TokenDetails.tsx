@@ -104,7 +104,7 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
                       style={styles.sendButton}
                       onPress={() => handleSend(item.network as NetworkType)}
                     >
-                      <Send size={16} color="#FF6501" />
+                      <Send size={16} color="#AA4981" />
                     </TouchableOpacity>
                   )}
                 </View>
