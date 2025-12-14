@@ -5,6 +5,7 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Box,
   Palette,
   QrCode,
   Settings,
@@ -226,6 +227,10 @@ export default function WalletScreen() {
     router.push('/wallet-setup/name-wallet');
   };
 
+  const handleSpacesPress = () => {
+    router.push('/spaces');
+  };
+
   const handleSettingsPress = () => {
     router.push('/settings');
   };
@@ -283,7 +288,10 @@ export default function WalletScreen() {
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
+          <TouchableOpacity style={styles.headerButtonFirst} onPress={handleSpacesPress}>
+            <Box size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton} onPress={handleSettingsPress}>
             <Settings size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
@@ -531,6 +539,13 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  headerButtonFirst: {
+    padding: 8,
+  },
+  headerButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   settingsButton: {
     padding: 8,
