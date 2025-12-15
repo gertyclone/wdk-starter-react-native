@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { pricingService, FiatCurrency } from '@/services/pricing-service';
+import { AssetTicker } from '@tetherto/wdk-react-native-provider';
 
 const SPACE_NAME_OPTIONS = ['usdt', 'xaut', 'pubkey'];
 const DURATION_OPTIONS = ['~10 mins', '~1 hour', '~8 hours'];
@@ -55,6 +57,7 @@ export default function SpacesScreen() {
   const [blockFee6, setBlockFee6] = useState<number | null>(null);
   const [blockFee48, setBlockFee48] = useState<number | null>(null);
   const [spaceNameOptions, setSpaceNameOptions] = useState<string[]>(SPACE_NAME_OPTIONS);
+  const [btcPriceUSD, setBtcPriceUSD] = useState<number | null>(null);
 
   // Placeholder handlers - customize these based on your needs
   const handleCreateSpace = () => {
@@ -106,7 +109,8 @@ export default function SpacesScreen() {
       fee1: number | null,
       fee6: number | null,
       fee48: number | null,
-      duration: string
+      duration: string,
+      btcPrice: number | null
     ): string => {
       if (price === null) {
         return 'Purchase';
@@ -121,10 +125,72 @@ export default function SpacesScreen() {
       // Format sats with commas for readability
       const formattedSats = totalPrice.toLocaleString();
 
-      return `Purchase for ${formattedSats}`;
+      // Calculate USD: (total_price_sats / 100,000,000) * btc_price_usd
+      if (btcPrice === null) {
+        return `Purchase for ${formattedSats} sats`;
+      }
+
+      const satsPerBitcoin = 100000000;
+      const usdAmount = (totalPrice / satsPerBitcoin) * btcPrice;
+
+      // Format USD with commas and 2 decimal places
+      const formattedUSD = usdAmount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+      return `Purchase for ${formattedSats} sats = $${formattedUSD}`;
     },
     [getBlockFee]
   );
+
+  // Initialize pricing service and fetch BTC price
+  useEffect(() => {
+    const loadBtcPrice = async () => {
+      try {
+        // Initialize pricing service if not already initialized
+        if (!pricingService.isReady()) {
+          await pricingService.initialize();
+        }
+
+        // Get BTC/USD price
+        const btcPrice = pricingService.getExchangeRate(AssetTicker.BTC, FiatCurrency.USD);
+        if (btcPrice) {
+          setBtcPriceUSD(btcPrice);
+        } else {
+          // If not in cache, fetch it
+          await pricingService.refreshExchangeRates();
+          const refreshedPrice = pricingService.getExchangeRate(AssetTicker.BTC, FiatCurrency.USD);
+          if (refreshedPrice) {
+            setBtcPriceUSD(refreshedPrice);
+          }
+        }
+      } catch (error) {
+        console.error('[Spaces] Failed to load BTC price:', error);
+        // Fallback to a default price if fetch fails
+        setBtcPriceUSD(89018);
+      }
+    };
+
+    loadBtcPrice();
+
+    // Refresh BTC price every 30 seconds
+    const interval = setInterval(async () => {
+      try {
+        if (pricingService.isReady()) {
+          await pricingService.refreshExchangeRates();
+          const refreshedPrice = pricingService.getExchangeRate(AssetTicker.BTC, FiatCurrency.USD);
+          if (refreshedPrice) {
+            setBtcPriceUSD(refreshedPrice);
+          }
+        }
+      } catch (error) {
+        console.error('[Spaces] Failed to refresh BTC price:', error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Load space names from API when component mounts
   useEffect(() => {
@@ -309,20 +375,21 @@ export default function SpacesScreen() {
     return () => clearTimeout(timeoutId);
   }, [subspace, spaceName]);
 
-  // Recalculate price when duration changes
+  // Recalculate price when duration changes or BTC price updates
   useEffect(() => {
     if (buttonState === 'available' && priceSats !== null) {
       const blockFee = getBlockFee(selectedDuration, blockFee1, blockFee6, blockFee48);
       if (blockFee !== null) {
         console.log(
-          `[Spaces] Recalculating price: duration=${selectedDuration}, price=${priceSats}, blockFee=${blockFee}`
+          `[Spaces] Recalculating price: duration=${selectedDuration}, price=${priceSats}, blockFee=${blockFee}, btcPrice=${btcPriceUSD}`
         );
         const totalLabel = calculateTotalPrice(
           priceSats,
           blockFee1,
           blockFee6,
           blockFee48,
-          selectedDuration
+          selectedDuration,
+          btcPriceUSD
         );
         setButtonLabel(totalLabel);
       } else {
@@ -336,6 +403,7 @@ export default function SpacesScreen() {
     blockFee6,
     blockFee48,
     buttonState,
+    btcPriceUSD,
     calculateTotalPrice,
     getBlockFee,
   ]);
