@@ -3,6 +3,7 @@ import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { ArrowLeft, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { colors } from '@/constants/colors';
@@ -30,6 +31,7 @@ interface Token {
 export default function ReceiveSelectTokenScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation(['common', 'screens']);
   const { wallet } = useWallet();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
@@ -143,9 +145,9 @@ export default function ReceiveSelectTokenScreen() {
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <ArrowLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Receive funds</Text>
+        <Text style={styles.headerTitle}>{t('screens:receive.title')}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -169,7 +171,7 @@ export default function ReceiveSelectTokenScreen() {
 
       {!searchQuery && recentTokens?.length > 0 && (
         <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>Recent</Text>
+          <Text style={styles.sectionTitle}>{t('screens:receive.recent')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -181,7 +183,7 @@ export default function ReceiveSelectTokenScreen() {
       )}
 
       <View style={styles.tokensSection}>
-        <Text style={styles.sectionTitle}>All tokens</Text>
+        <Text style={styles.sectionTitle}>{t('screens:receive.allTokens')}</Text>
         {filteredTokens.length > 0 ? (
           <FlatList
             data={filteredTokens}
@@ -192,7 +194,7 @@ export default function ReceiveSelectTokenScreen() {
           />
         ) : (
           <View style={styles.noTokensContainer}>
-            <Text style={styles.noTokensText}>No tokens found matching your search</Text>
+            <Text style={styles.noTokensText}>{t('screens:receive.noTokensFound')}</Text>
           </View>
         )}
       </View>

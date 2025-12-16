@@ -1,5 +1,6 @@
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { Fingerprint, Shield } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,6 +12,7 @@ import getErrorMessage from '@/utils/get-error-message';
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation(['screens', 'errors']);
   const { wallet, unlockWallet } = useWallet();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export default function AuthorizeScreen() {
 
   const handleAuthorize = async () => {
     if (!wallet) {
-      Alert.alert('Error', 'No wallet found');
+      Alert.alert(t('errors:generic.unknown'), t('errors:wallet.notFound'));
       router.replace('/onboarding');
       return;
     }
@@ -37,7 +39,7 @@ export default function AuthorizeScreen() {
       }
     } catch (error) {
       console.error('Failed to unlock wallet:', error);
-      setError(getErrorMessage(error, 'Failed to unlock wallet'));
+      setError(getErrorMessage(error, t('errors:wallet.unlockFailed')));
       return;
     } finally {
       setIsLoading(false);
@@ -55,13 +57,13 @@ export default function AuthorizeScreen() {
           <Shield size={80} color={colors.primary} />
         </View>
 
-        <Text style={styles.title}>Authorize Access</Text>
-        <Text style={styles.subtitle}>Verify your identity to access your wallet</Text>
+        <Text style={styles.title}>{t('screens:authorize.title')}</Text>
+        <Text style={styles.subtitle}>{t('screens:authorize.subtitle')}</Text>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Initializing wallet...</Text>
+            <Text style={styles.loadingText}>{t('screens:authorize.initializing')}</Text>
           </View>
         ) : (
           <>
@@ -71,7 +73,7 @@ export default function AuthorizeScreen() {
               disabled={isLoading}
             >
               <Fingerprint size={24} color={colors.white} />
-              <Text style={styles.primaryButtonText}>Use Biometric</Text>
+              <Text style={styles.primaryButtonText}>{t('screens:authorize.useBiometric')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -84,7 +86,7 @@ export default function AuthorizeScreen() {
       </View>
 
       <View style={[styles.footer, { marginBottom: insets.bottom + 20 }]}>
-        <Text style={styles.footerText}>Your wallet is encrypted and secured with your device</Text>
+        <Text style={styles.footerText}>{t('screens:authorize.footer')}</Text>
       </View>
     </View>
   );

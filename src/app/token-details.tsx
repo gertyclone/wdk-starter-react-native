@@ -11,11 +11,13 @@ import { FiatCurrency, pricingService } from '../services/pricing-service';
 import { networkConfigs } from '@/config/networks';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
+import { useTranslation } from '@/hooks/use-translation';
 import { colors } from '@/constants/colors';
 
 export default function TokenDetailsScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['screens', 'errors']);
   const { wallet, balances, addresses } = useWallet();
   const params = useLocalSearchParams<{ walletId?: string; token?: string }>();
 
@@ -129,9 +131,9 @@ export default function TokenDetailsScreen() {
   if (!params.walletId || !wallet) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header isLoading={balances.isLoading} title="Token Details" />
+        <Header isLoading={balances.isLoading} title={t('tokenDetails.title')} />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Wallet not found</Text>
+          <Text style={styles.errorText}>{t('errors:wallet.notFound')}</Text>
         </View>
       </View>
     );
@@ -140,9 +142,9 @@ export default function TokenDetailsScreen() {
   if (!tokenData || !tokenConfig) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header isLoading={balances.isLoading} title="Token Details" />
+        <Header isLoading={balances.isLoading} title={t('tokenDetails.title')} />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Token not found or not supported</Text>
+          <Text style={styles.errorText}>{t('tokenDetails.tokenNotFound')}</Text>
         </View>
       </View>
     );
@@ -150,7 +152,7 @@ export default function TokenDetailsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header isLoading={balances.isLoading} title={`${tokenData.name} Details`} />
+      <Header isLoading={balances.isLoading} title={t('tokenDetails.titleWithName', { name: tokenData.name })} />
       <TokenDetails tokenData={tokenData} onSendPress={handleSendToken} />
     </View>
   );

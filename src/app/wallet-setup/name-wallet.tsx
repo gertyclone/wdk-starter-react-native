@@ -1,5 +1,6 @@
 import avatarOptions from '@/config/avatar-options';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -18,6 +19,7 @@ import { colors } from '@/constants/colors';
 export default function NameWalletScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['common', 'screens']);
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
 
@@ -36,7 +38,7 @@ export default function NameWalletScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -45,18 +47,18 @@ export default function NameWalletScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Name Your Wallet</Text>
-          <Text style={styles.subtitle}>This name is just for you and can be changed later.</Text>
+          <Text style={styles.title}>{t('screens:walletSetup.nameWallet.title')}</Text>
+          <Text style={styles.subtitle}>{t('screens:walletSetup.nameWallet.subtitle')}</Text>
 
           <View style={styles.inputSection}>
-            <Text style={styles.label}>Wallet Name*</Text>
+            <Text style={styles.label}>{t('screens:walletSetup.nameWallet.label')}</Text>
             <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>{selectedAvatar.emoji}</Text>
               <TextInput
                 style={styles.input}
                 value={walletName}
                 onChangeText={setWalletName}
-                placeholder="e.g., Investment Stash"
+                placeholder={t('screens:walletSetup.nameWallet.placeholder')}
                 placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
               />
@@ -64,7 +66,7 @@ export default function NameWalletScreen() {
           </View>
 
           <View style={styles.avatarSection}>
-            <Text style={styles.sectionTitle}>Choose an avatar</Text>
+            <Text style={styles.sectionTitle}>{t('screens:walletSetup.nameWallet.chooseAvatar')}</Text>
             <View style={styles.avatarGrid}>
               {avatarOptions.map(avatar => (
                 <TouchableOpacity
@@ -91,7 +93,7 @@ export default function NameWalletScreen() {
           disabled={isNextDisabled}
         >
           <Text style={[styles.nextButtonText, isNextDisabled && styles.nextButtonTextDisabled]}>
-            Next
+            {t('common:buttons.next')}
           </Text>
         </TouchableOpacity>
       </View>

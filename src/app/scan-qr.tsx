@@ -1,6 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { Alert, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -13,6 +14,7 @@ const qrSize = screenWidth * 0.7;
 export default function ScanQRScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation(['common', 'screens', 'errors']);
   const { returnRoute, ...params } = useLocalSearchParams();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -25,9 +27,9 @@ export default function ScanQRScreen() {
 
       // Validate if it's a valid address format (basic validation)
       if (!data || data.length < 10) {
-        Alert.alert('Invalid QR Code', 'The scanned QR code does not contain a valid address.', [
+        Alert.alert(t('screens:scanQR.invalidQR'), t('screens:scanQR.invalidQRMessage'), [
           {
-            text: 'Try Again',
+            text: t('common:buttons.retry'),
             onPress: () => setScanned(false),
           },
         ]);
@@ -59,8 +61,8 @@ export default function ScanQRScreen() {
     const result = await requestPermission();
     if (!result.granted) {
       Alert.alert(
-        'Camera Permission Required',
-        'Please allow camera access to scan QR codes for wallet addresses.'
+        t('screens:scanQR.cameraPermissionRequired'),
+        t('screens:scanQR.cameraPermissionMessage')
       );
     }
   }, [requestPermission]);
@@ -76,7 +78,7 @@ export default function ScanQRScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.centerContent}>
-          <Text style={styles.centerText}>Checking camera permission...</Text>
+          <Text style={styles.centerText}>{t('screens:scanQR.checkingPermission')}</Text>
         </View>
       </View>
     );
@@ -93,12 +95,12 @@ export default function ScanQRScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.centerContent}>
-          <Text style={styles.centerTitle}>Camera Permission Required</Text>
+          <Text style={styles.centerTitle}>{t('screens:scanQR.cameraPermissionRequired')}</Text>
           <Text style={styles.centerText}>
-            Please allow camera access to scan QR codes for wallet addresses.
+            {t('screens:scanQR.cameraPermissionMessage')}
           </Text>
           <TouchableOpacity style={styles.permissionButton} onPress={handleRequestPermission}>
-            <Text style={styles.permissionButtonText}>Enable Camera</Text>
+            <Text style={styles.permissionButtonText}>{t('screens:scanQR.enableCamera')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -117,8 +119,8 @@ export default function ScanQRScreen() {
 
       {/* Title Section */}
       <View style={styles.titleSection}>
-        <Text style={styles.title}>Scan QR code to make payment.</Text>
-        <Text style={styles.subtitle}>Hold your phone up to the QR code.</Text>
+        <Text style={styles.title}>{t('screens:scanQR.title')}</Text>
+        <Text style={styles.subtitle}>{t('screens:scanQR.subtitle')}</Text>
       </View>
 
       {/* Camera View */}
@@ -135,7 +137,7 @@ export default function ScanQRScreen() {
             </View>
 
             <View style={styles.scanInfo}>
-              <Text style={styles.scanLabel}>Scan address</Text>
+              <Text style={styles.scanLabel}>{t('screens:scanQR.scanAddress')}</Text>
             </View>
           </View>
         </CameraView>

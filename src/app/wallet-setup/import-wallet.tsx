@@ -1,6 +1,7 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { colors } from '@/constants/colors';
@@ -20,6 +21,7 @@ import { toast } from 'sonner-native';
 export default function ImportWalletScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['common', 'screens', 'errors']);
   const [secretWords, setSecretWords] = useState<string[]>(Array(12).fill(''));
 
   const handleWordChange = (index: number, text: string) => {
@@ -33,16 +35,14 @@ export default function ImportWalletScreen() {
       const clipboardContent = await Clipboard.getStringAsync();
 
       if (!clipboardContent.trim()) {
-        toast.error('Empty Clipboard! No text found in clipboard');
+        toast.error(t('screens:walletSetup.importWallet.emptyClipboard'));
         return;
       }
 
       const words = clipboardContent.trim().split(/\s+/).slice(0, 12);
 
       if (words.length < 12) {
-        toast.error(
-          `Invalid Phrase! Found only ${words.length} words in clipboard. Please ensure you have exactly 12 words.`
-        );
+        toast.error(t('screens:walletSetup.importWallet.invalidPhrase', { count: words.length }));
         return;
       }
 
@@ -54,16 +54,16 @@ export default function ImportWalletScreen() {
       });
       setSecretWords(newWords);
 
-      toast.success('12 words have been pasted from clipboard');
+      toast.success(t('screens:walletSetup.importWallet.pasteSuccess'));
     } catch (error) {
       console.error('Paste error:', error);
-      toast.error('Could not paste from clipboard');
+      toast.error(t('screens:walletSetup.importWallet.pasteFailed'));
     }
   };
 
   const handleScanText = () => {
-    Alert.alert('Scan Text', 'Camera functionality would open here to scan QR code or text', [
-      { text: 'OK' },
+    Alert.alert(t('screens:walletSetup.importWallet.scanText'), t('screens:walletSetup.importWallet.scanTextMessage'), [
+      { text: t('common:buttons.done') },
     ]);
   };
 
@@ -92,8 +92,8 @@ export default function ImportWalletScreen() {
 
   const handleImportWallet = () => {
     if (!isFormValid()) {
-      Alert.alert('Incomplete', 'Please fill in all 12 words of your secret phrase', [
-        { text: 'OK' },
+      Alert.alert(t('screens:walletSetup.importWallet.incomplete'), t('screens:walletSetup.importWallet.incompleteMessage'), [
+        { text: t('common:buttons.done') },
       ]);
       return;
     }
@@ -104,9 +104,9 @@ export default function ImportWalletScreen() {
     // Validate the seed phrase
     if (!validateSeedPhrase(seedPhrase)) {
       Alert.alert(
-        'Invalid Seed Phrase',
-        'Please check your seed phrase. Make sure all words are spelled correctly and contain only lowercase letters.',
-        [{ text: 'OK' }]
+        t('screens:walletSetup.importWallet.invalidSeedPhrase'),
+        t('screens:walletSetup.importWallet.invalidSeedPhraseMessage'),
+        [{ text: t('common:buttons.done') }]
       );
       return;
     }
@@ -123,7 +123,7 @@ export default function ImportWalletScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -132,19 +132,19 @@ export default function ImportWalletScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Import via Secret Phrase</Text>
+          <Text style={styles.title}>{t('screens:walletSetup.importWallet.title')}</Text>
 
           <SeedPhrase words={secretWords} editable={true} onWordChange={handleWordChange} />
 
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.actionButton} onPress={handlePaste}>
               <FileText size={20} color={colors.primary} />
-              <Text style={styles.actionButtonText}>Paste</Text>
+              <Text style={styles.actionButtonText}>{t('common:buttons.paste')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton} onPress={handleScanText}>
               <ScanText size={20} color={colors.primary} />
-              <Text style={styles.actionButtonText}>Scan Text</Text>
+              <Text style={styles.actionButtonText}>{t('screens:walletSetup.importWallet.scanText')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -159,7 +159,7 @@ export default function ImportWalletScreen() {
           <Text
             style={[styles.importButtonText, !isFormValid() && styles.importButtonTextDisabled]}
           >
-            Import Wallet
+            {t('screens:walletSetup.importWallet.title')}
           </Text>
         </TouchableOpacity>
       </View>

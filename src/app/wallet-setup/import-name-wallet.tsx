@@ -3,6 +3,7 @@ import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { colors } from '@/constants/colors';
@@ -26,6 +27,7 @@ export default function ImportNameWalletScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['common', 'screens', 'errors']);
   const { createWallet } = useWallet();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
@@ -36,7 +38,7 @@ export default function ImportNameWalletScreen() {
 
   const handleNext = async () => {
     if (!seedPhrase) {
-      Alert.alert('Error', 'No seed phrase provided. Please go back and enter your seed phrase.');
+      Alert.alert(t('errors:generic.unknown'), t('screens:walletSetup.importNameWallet.noSeedPhrase'));
       return;
     }
 
@@ -47,7 +49,7 @@ export default function ImportNameWalletScreen() {
       await createWallet({ name: walletName, mnemonic: seedPhrase });
       await setAvatar(selectedAvatar.id);
 
-      toast.success('Your wallet has been imported successfully.');
+      toast.success(t('screens:walletSetup.importNameWallet.importSuccess'));
 
       navigation.dispatch(
         CommonActions.reset({
@@ -58,9 +60,9 @@ export default function ImportNameWalletScreen() {
     } catch (error: any) {
       console.error('Import wallet error:', error);
       Alert.alert(
-        'Import Failed',
-        error.message || 'Failed to import wallet. Please check your seed phrase and try again.',
-        [{ text: 'OK' }]
+        t('screens:walletSetup.importNameWallet.importFailed'),
+        error.message || t('errors:wallet.importFailed'),
+        [{ text: t('common:buttons.done') }]
       );
     } finally {
       setIsImporting(false);
@@ -74,7 +76,7 @@ export default function ImportNameWalletScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -83,18 +85,18 @@ export default function ImportNameWalletScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Name Your Wallet</Text>
-          <Text style={styles.subtitle}>This name is just for you and can be changed later.</Text>
+          <Text style={styles.title}>{t('screens:walletSetup.importNameWallet.title')}</Text>
+          <Text style={styles.subtitle}>{t('screens:walletSetup.nameWallet.subtitle')}</Text>
 
           <View style={styles.inputSection}>
-            <Text style={styles.label}>Wallet Name*</Text>
+            <Text style={styles.label}>{t('screens:walletSetup.nameWallet.label')}</Text>
             <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>💼</Text>
               <TextInput
                 style={styles.input}
                 value={walletName}
                 onChangeText={setWalletName}
-                placeholder="e.g., Investment Stash"
+                placeholder={t('screens:walletSetup.nameWallet.placeholder')}
                 placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
               />

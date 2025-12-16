@@ -1,0 +1,35 @@
+{
+  "network": {
+    "failed": "ネットワークリクエストが失敗しました",
+    "timeout": "リクエストタイムアウト",
+    "unavailable": "ネットワークが利用できません"
+  },
+  "wallet": {
+    "notFound": "ウォレットが見つかりません",
+    "locked": "ウォレットがロックされています",
+    "unlockFailed": "ウォレットのロック解除に失敗しました",
+    "createFailed": "ウォレットの作成に失敗しました",
+    "importFailed": "ウォレットのインポートに失敗しました",
+    "deleteFailed": "ウォレットの削除に失敗しました"
+  },
+  "transaction": {
+    "failed": "取引が失敗しました",
+    "insufficientFunds": "残高不足",
+    "invalidAddress": "無効なアドレス",
+    "invalidAmount": "無効な金額",
+    "networkError": "取引中のネットワークエラー"
+  },
+  "validation": {
+    "required": "このフィールドは必須です",
+    "invalidFormat": "無効な形式",
+    "tooShort": "値が短すぎます",
+    "tooLong": "値が長すぎます",
+    "invalidEmail": "無効なメールアドレス",
+    "invalidAddress": "無効なアドレス形式"
+  },
+  "generic": {
+    "unknown": "不明なエラーが発生しました",
+    "tryAgain": "もう一度お試しください",
+    "contactSupport": "問題が続く場合は、サポートにお問い合わせください"
+  }
+}

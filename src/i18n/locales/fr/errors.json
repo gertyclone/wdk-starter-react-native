@@ -1,0 +1,35 @@
+{
+  "network": {
+    "failed": "Échec de la requête réseau",
+    "timeout": "Délai d'attente dépassé",
+    "unavailable": "Réseau indisponible"
+  },
+  "wallet": {
+    "notFound": "Portefeuille introuvable",
+    "locked": "Le portefeuille est verrouillé",
+    "unlockFailed": "Échec du déverrouillage du portefeuille",
+    "createFailed": "Échec de la création du portefeuille",
+    "importFailed": "Échec de l'importation du portefeuille",
+    "deleteFailed": "Échec de la suppression du portefeuille"
+  },
+  "transaction": {
+    "failed": "Transaction échouée",
+    "insufficientFunds": "Fonds insuffisants",
+    "invalidAddress": "Adresse invalide",
+    "invalidAmount": "Montant invalide",
+    "networkError": "Erreur réseau lors de la transaction"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalidFormat": "Format invalide",
+    "tooShort": "La valeur est trop courte",
+    "tooLong": "La valeur est trop longue",
+    "invalidEmail": "Adresse e-mail invalide",
+    "invalidAddress": "Format d'adresse invalide"
+  },
+  "generic": {
+    "unknown": "Une erreur inconnue s'est produite",
+    "tryAgain": "Veuillez réessayer",
+    "contactSupport": "Veuillez contacter le support si le problème persiste"
+  }
+}

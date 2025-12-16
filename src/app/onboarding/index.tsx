@@ -5,10 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OnBoardingWelcome } from '@/components/onboarding/onboarding-welcome';
 import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '@/constants/colors';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function OnBoardingScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation('screens');
 
   const handleCreateWallet = () => {
     router.push('/wallet-setup/name-wallet');
@@ -25,19 +27,19 @@ export default function OnBoardingScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <OnBoardingWelcome
-        title="Welcome!"
-        subtitle="Set up your wallet and start exploring the crypto world."
+        title={t('onboarding.welcome')}
+        subtitle={t('onboarding.subtitle')}
         actionButtons={[
           {
             id: 1,
-            title: 'Create Wallet',
+            title: t('onboarding.createWallet'),
             iconName: 'wallet',
             variant: 'filled',
             onPress: handleCreateWallet,
           },
           {
             id: 2,
-            title: 'Import Wallet',
+            title: t('onboarding.importWallet'),
             iconName: 'download',
             variant: 'tinted',
             onPress: handleImportWallet,

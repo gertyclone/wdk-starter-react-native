@@ -1,0 +1,35 @@
+{
+  "network": {
+    "failed": "Network request failed",
+    "timeout": "Request timeout",
+    "unavailable": "Network unavailable"
+  },
+  "wallet": {
+    "notFound": "Wallet not found",
+    "locked": "Wallet is locked",
+    "unlockFailed": "Failed to unlock wallet",
+    "createFailed": "Failed to create wallet",
+    "importFailed": "Failed to import wallet",
+    "deleteFailed": "Failed to delete wallet"
+  },
+  "transaction": {
+    "failed": "Transaction failed",
+    "insufficientFunds": "Insufficient funds",
+    "invalidAddress": "Invalid address",
+    "invalidAmount": "Invalid amount",
+    "networkError": "Network error during transaction"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidFormat": "Invalid format",
+    "tooShort": "Value is too short",
+    "tooLong": "Value is too long",
+    "invalidEmail": "Invalid email address",
+    "invalidAddress": "Invalid address format"
+  },
+  "generic": {
+    "unknown": "An unknown error occurred",
+    "tryAgain": "Please try again",
+    "contactSupport": "Please contact support if the problem persists"
+  }
+}

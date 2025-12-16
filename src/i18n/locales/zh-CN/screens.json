@@ -1,0 +1,110 @@
+{
+  "wallet": {
+    "title": "钱包",
+    "balance": "余额",
+    "transactions": "交易",
+    "pullToRefresh": "下拉刷新"
+  },
+  "onboarding": {
+    "welcome": "欢迎！",
+    "subtitle": "设置您的钱包，开始探索加密世界。"
+  },
+  "send": {
+    "title": "发送资金",
+    "selectNetwork": "选择网络",
+    "selectToken": "选择代币",
+    "details": {
+      "title": "发送 {{token}}",
+      "token": "代币：",
+      "network": "网络：",
+      "amount": "金额：",
+      "fee": "手续费：",
+      "to": "发送至：",
+      "summary": "摘要"
+    }
+  },
+  "receive": {
+    "title": "接收",
+    "selectNetwork": "选择网络",
+    "selectToken": "选择代币",
+    "scanQR": "扫描二维码",
+    "addressLabel": "您的 {{network}} 地址"
+  },
+  "settings": {
+    "title": "设置",
+    "walletInfo": "钱包信息",
+    "networkAddresses": "网络地址",
+    "about": "关于",
+    "dangerZone": "危险区域",
+    "deleteWallet": "删除钱包",
+    "deleteWalletConfirm": "这将永久删除您的钱包和所有相关数据。请确保您已备份恢复短语。此操作无法撤销。",
+    "walletDeleted": "钱包删除成功",
+    "deleteFailed": "删除钱包失败",
+    "addressCopied": "{{network}} 地址已复制到剪贴板"
+  },
+  "spaces": {
+    "title": "空间",
+    "subspace": "子空间",
+    "spaceName": "空间名称",
+    "createSpace": "创建新空间",
+    "mySpaces": "我的空间",
+    "noSpaces": "还没有空间",
+    "noSpacesSubtext": "创建您的第一个空间开始使用",
+    "about": "关于空间",
+    "whatAreSpaces": "什么是空间？",
+    "whatAreSpacesDesc": "空间是用于组织您的数字资产和活动的可定制环境。",
+    "features": "功能",
+    "featuresDesc": "创建、管理和组织您的空间",
+    "purchase": "购买",
+    "purchaseFor": "购买 {{amount}} 聪 = ${{usd}}",
+    "checking": "检查中...",
+    "taken": "已占用",
+    "duration": {
+      "tenMins": "~10 分钟",
+      "oneHour": "~1 小时",
+      "eightHours": "~8 小时"
+    }
+  },
+  "activity": {
+    "title": "活动"
+  },
+  "assets": {
+    "title": "您的资产"
+  },
+  "tokenDetails": {
+    "title": "代币详情",
+    "titleWithName": "{{name}} 详情"
+  },
+  "scanQR": {
+    "title": "扫描二维码",
+    "scanAddress": "扫描地址"
+  },
+  "authorize": {
+    "title": "授权"
+  },
+  "walletSetup": {
+    "nameWallet": {
+      "title": "命名钱包",
+      "label": "钱包名称*",
+      "placeholder": "例如：投资储备"
+    },
+    "importNameWallet": {
+      "title": "导入钱包",
+      "label": "钱包名称*",
+      "placeholder": "例如：投资储备"
+    },
+    "secureWallet": {
+      "title": "保护钱包"
+    },
+    "confirmPhrase": {
+      "title": "确认短语",
+      "wordLabel": "单词 #{{position}}"
+    },
+    "complete": {
+      "title": "完成"
+    },
+    "importWallet": {
+      "title": "导入钱包"
+    }
+  }
+}

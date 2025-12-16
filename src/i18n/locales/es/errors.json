@@ -1,0 +1,35 @@
+{
+  "network": {
+    "failed": "Error en la solicitud de red",
+    "timeout": "Tiempo de espera agotado",
+    "unavailable": "Red no disponible"
+  },
+  "wallet": {
+    "notFound": "Billetera no encontrada",
+    "locked": "La billetera está bloqueada",
+    "unlockFailed": "Error al desbloquear la billetera",
+    "createFailed": "Error al crear la billetera",
+    "importFailed": "Error al importar la billetera",
+    "deleteFailed": "Error al eliminar la billetera"
+  },
+  "transaction": {
+    "failed": "Transacción fallida",
+    "insufficientFunds": "Fondos insuficientes",
+    "invalidAddress": "Dirección inválida",
+    "invalidAmount": "Cantidad inválida",
+    "networkError": "Error de red durante la transacción"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalidFormat": "Formato inválido",
+    "tooShort": "El valor es demasiado corto",
+    "tooLong": "El valor es demasiado largo",
+    "invalidEmail": "Dirección de correo inválida",
+    "invalidAddress": "Formato de dirección inválido"
+  },
+  "generic": {
+    "unknown": "Ocurrió un error desconocido",
+    "tryAgain": "Por favor, inténtalo de nuevo",
+    "contactSupport": "Por favor, contacta con soporte si el problema persiste"
+  }
+}

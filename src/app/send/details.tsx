@@ -34,10 +34,12 @@ import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation(['screens', 'errors']);
   const { refreshWalletBalance } = useWallet();
   const params = useLocalSearchParams();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -262,14 +264,14 @@ export default function SendDetailsScreen() {
       if (inputMode === 'token') {
         if (numericAmount > numericBalance) {
           setAmountError(
-            `Maximum: ${formatTokenAmount(numericBalance, tokenSymbol as AssetTicker)}`
+            `${t('screens:send.details.maximum')}: ${formatTokenAmount(numericBalance, tokenSymbol as AssetTicker)}`
           );
         } else {
           setAmountError(null);
         }
       } else {
         if (numericAmount > numericBalanceUSD) {
-          setAmountError(`Maximum: ${tokenBalanceUSD}`);
+          setAmountError(`${t('screens:send.details.maximum')}: ${tokenBalanceUSD}`);
         } else {
           setAmountError(null);
         }
@@ -309,12 +311,13 @@ export default function SendDetailsScreen() {
   }, []);
 
   const validateTransaction = useCallback(() => {
+    const { t } = useTranslation(['screens', 'errors']);
     if (!recipientAddress) {
-      Alert.alert('Error', 'Please enter a recipient address');
+      Alert.alert(t('errors:validation.required'), t('screens:send.details.enterRecipientAddress'));
       return false;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert(t('errors:validation.required'), t('screens:send.details.enterValidAmount'));
       return false;
     }
 
@@ -323,7 +326,7 @@ export default function SendDetailsScreen() {
     const numericAmount = parseFloat(amount.replace(',', ''));
 
     if (inputMode === 'token' && numericAmount > numericBalance) {
-      Alert.alert('Error', 'Insufficient balance');
+      Alert.alert(t('errors:transaction.insufficientFunds'), '');
       return false;
     }
 
@@ -360,9 +363,9 @@ export default function SendDetailsScreen() {
       setShowConfirmation(true);
     } catch (error) {
       console.error('Transaction failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Transaction failed';
+      const errorMessage = error instanceof Error ? error.message : t('errors:transaction.failed');
 
-      Alert.alert('Transaction Failed', errorMessage, [{ text: 'OK' }]);
+      Alert.alert(t('errors:transaction.failed'), errorMessage, [{ text: t('common:buttons.done') }]);
 
       setTransactionResult({ error: errorMessage });
     } finally {
@@ -387,10 +390,10 @@ export default function SendDetailsScreen() {
 
   const balanceDisplay = useMemo(() => {
     if (inputMode === 'token') {
-      return `Balance: ${formatTokenAmount(parseFloat(tokenBalance), tokenSymbol as AssetTicker)}`;
+      return `${t('screens:send.details.balance')} ${formatTokenAmount(parseFloat(tokenBalance), tokenSymbol as AssetTicker)}`;
     }
-    return `Balance: ${formatUSDValue(parseFloat(tokenBalanceUSD))}`;
-  }, [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol]);
+    return `${t('screens:send.details.balance')} ${formatUSDValue(parseFloat(tokenBalanceUSD))}`;
+  }, [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol, t]);
 
   const getFeeFromTransactionResult = (
     transactionResult: { txId?: { fee: string; hash: string } },
@@ -424,7 +427,7 @@ export default function SendDetailsScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
-            <Header title={`Send ${getDisplaySymbol(tokenSymbol)}`} style={styles.header} />
+            <Header title={t('screens:send.details.title', { token: getDisplaySymbol(tokenSymbol) })} style={styles.header} />
 
             <ScrollView
               ref={scrollViewRef}
@@ -436,7 +439,7 @@ export default function SendDetailsScreen() {
               {/* Transaction Summary */}
               <View style={styles.transactionRecap}>
                 <View style={styles.recapRow}>
-                  <Text style={styles.recapLabel}>Token:</Text>
+                  <Text style={styles.recapLabel}>{t('screens:send.details.token')}</Text>
                   <Text style={styles.recapValue}>
                     {getDisplaySymbol(tokenSymbol)}
                     <Text style={styles.recapValueSecondary}>({tokenSymbol})</Text>
@@ -444,7 +447,7 @@ export default function SendDetailsScreen() {
                 </View>
                 <View style={styles.recapDivider} />
                 <View style={styles.recapRow}>
-                  <Text style={styles.recapLabel}>Network:</Text>
+                  <Text style={styles.recapLabel}>{t('screens:send.details.network')}</Text>
                   <Text style={styles.recapValue}>{networkName}</Text>
                 </View>
               </View>
@@ -486,7 +489,7 @@ export default function SendDetailsScreen() {
                         { color: isUseMaxDisabled ? colors.textTertiary : colors.primary },
                       ]}
                     >
-                      Use Max
+                      {t('screens:send.details.useMax')}
                     </Text>
                   </TouchableOpacity>
                   <Text style={styles.balanceText}>{balanceDisplay}</Text>
@@ -496,7 +499,7 @@ export default function SendDetailsScreen() {
 
               <View style={styles.gasSection}>
                 <View style={styles.gasTitleRow}>
-                  <Text style={styles.gasTitle}>Estimated Fee:</Text>
+                  <Text style={styles.gasTitle}>{t('screens:send.details.estimatedFee')}</Text>
                   <TouchableOpacity
                     onPress={() => handleCalculateGasFee(true, amount)}
                     disabled={isLoadingGasEstimate || (tokenId.toLowerCase() === 'btc' && !amount)}
@@ -514,11 +517,11 @@ export default function SendDetailsScreen() {
                   </TouchableOpacity>
                 </View>
                 {isLoadingGasEstimate ? (
-                  <Text style={styles.gasAmount}>Calculating...</Text>
+                  <Text style={styles.gasAmount}>{t('screens:send.details.calculating')}</Text>
                 ) : gasEstimate.error ? (
                   <Text style={styles.gasError}>{gasEstimate.error}</Text>
                 ) : tokenId.toLowerCase() === 'btc' && (!amount || parseFloat(amount) <= 0) ? (
-                  <Text style={styles.gasError}>Insert amount for gas fee estimation</Text>
+                  <Text style={styles.gasError}>{t('screens:send.details.insertAmountForGas')}</Text>
                 ) : gasEstimate.fee !== undefined ? (
                   <>
                     <Text style={styles.gasAmount}>
@@ -529,7 +532,7 @@ export default function SendDetailsScreen() {
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.gasAmount}>Loading fee estimate...</Text>
+                  <Text style={styles.gasAmount}>{t('screens:send.details.loadingFeeEstimate')}</Text>
                 )}
               </View>
             </ScrollView>
@@ -558,7 +561,7 @@ export default function SendDetailsScreen() {
                       styles.sendButtonTextDisabled,
                   ]}
                 >
-                  {sendingTransaction ? 'Sending...' : 'Send'}
+                  {sendingTransaction ? t('screens:send.details.sending') : t('common:buttons.send')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -575,14 +578,14 @@ export default function SendDetailsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Transaction Submitted</Text>
+            <Text style={styles.modalTitle}>{t('screens:send.details.transactionSubmitted')}</Text>
             <Text style={styles.modalDescription}>
-              Your transaction has been submitted and is now processing.
+              {t('screens:send.details.transactionProcessing')}
             </Text>
 
             {transactionResult?.txId && (
               <View style={styles.transactionSummary}>
-                <Text style={styles.summaryLabel}>Fee:</Text>
+                <Text style={styles.summaryLabel}>{t('screens:send.details.fee')}</Text>
                 <Text style={styles.summaryValue}>
                   {getFeeFromTransactionResult(transactionResult, tokenSymbol as AssetTicker)}
                 </Text>
@@ -590,24 +593,24 @@ export default function SendDetailsScreen() {
             )}
 
             <View style={styles.transactionSummary}>
-              <Text style={styles.summaryLabel}>Amount:</Text>
+              <Text style={styles.summaryLabel}>{t('screens:send.details.amount')}</Text>
               <Text style={styles.summaryValue}>{getTransactionAmout()}</Text>
             </View>
 
             <View style={styles.transactionSummary}>
-              <Text style={styles.summaryLabel}>To:</Text>
+              <Text style={styles.summaryLabel}>{t('screens:send.details.to')}</Text>
               <Text style={styles.summaryValue} numberOfLines={1} ellipsizeMode="middle">
                 {recipientAddress}
               </Text>
             </View>
 
             <View style={styles.transactionSummary}>
-              <Text style={styles.summaryLabel}>Network:</Text>
+              <Text style={styles.summaryLabel}>{t('screens:send.details.network')}</Text>
               <Text style={styles.summaryValue}>{networkName}</Text>
             </View>
 
             <TouchableOpacity style={styles.modalButton} onPress={handleConfirmSend}>
-              <Text style={styles.modalButtonText}>Close & Return to Main Screen</Text>
+              <Text style={styles.modalButtonText}>{t('screens:send.details.closeAndReturn')}</Text>
             </TouchableOpacity>
           </View>
         </View>

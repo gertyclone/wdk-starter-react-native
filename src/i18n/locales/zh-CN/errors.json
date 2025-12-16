@@ -1,0 +1,35 @@
+{
+  "network": {
+    "failed": "网络请求失败",
+    "timeout": "请求超时",
+    "unavailable": "网络不可用"
+  },
+  "wallet": {
+    "notFound": "未找到钱包",
+    "locked": "钱包已锁定",
+    "unlockFailed": "解锁钱包失败",
+    "createFailed": "创建钱包失败",
+    "importFailed": "导入钱包失败",
+    "deleteFailed": "删除钱包失败"
+  },
+  "transaction": {
+    "failed": "交易失败",
+    "insufficientFunds": "余额不足",
+    "invalidAddress": "无效地址",
+    "invalidAmount": "无效金额",
+    "networkError": "交易期间网络错误"
+  },
+  "validation": {
+    "required": "此字段为必填项",
+    "invalidFormat": "无效格式",
+    "tooShort": "值太短",
+    "tooLong": "值太长",
+    "invalidEmail": "无效的电子邮件地址",
+    "invalidAddress": "无效的地址格式"
+  },
+  "generic": {
+    "unknown": "发生未知错误",
+    "tryAgain": "请重试",
+    "contactSupport": "如果问题持续存在，请联系支持"
+  }
+}

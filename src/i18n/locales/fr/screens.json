@@ -1,0 +1,110 @@
+{
+  "wallet": {
+    "title": "Portefeuille",
+    "balance": "Solde",
+    "transactions": "Transactions",
+    "pullToRefresh": "Tirer pour actualiser"
+  },
+  "onboarding": {
+    "welcome": "Bienvenue !",
+    "subtitle": "Configurez votre portefeuille et commencez à explorer le monde de la crypto."
+  },
+  "send": {
+    "title": "Envoyer des fonds",
+    "selectNetwork": "Sélectionner le réseau",
+    "selectToken": "Sélectionner le jeton",
+    "details": {
+      "title": "Envoyer {{token}}",
+      "token": "Jeton :",
+      "network": "Réseau :",
+      "amount": "Montant :",
+      "fee": "Frais :",
+      "to": "À :",
+      "summary": "Résumé"
+    }
+  },
+  "receive": {
+    "title": "Recevoir",
+    "selectNetwork": "Sélectionner le réseau",
+    "selectToken": "Sélectionner le jeton",
+    "scanQR": "Scanner le code QR",
+    "addressLabel": "Votre adresse {{network}}"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "walletInfo": "Informations du portefeuille",
+    "networkAddresses": "Adresses réseau",
+    "about": "À propos",
+    "dangerZone": "Zone de danger",
+    "deleteWallet": "Supprimer le portefeuille",
+    "deleteWalletConfirm": "Cela supprimera définitivement votre portefeuille et toutes les données associées. Assurez-vous d'avoir sauvegardé votre phrase de récupération. Cette action ne peut pas être annulée.",
+    "walletDeleted": "Portefeuille supprimé avec succès",
+    "deleteFailed": "Échec de la suppression du portefeuille",
+    "addressCopied": "Adresse {{network}} copiée dans le presse-papiers"
+  },
+  "spaces": {
+    "title": "Espaces",
+    "subspace": "sous-espace",
+    "spaceName": "nom_espace",
+    "createSpace": "Créer un nouvel espace",
+    "mySpaces": "Mes espaces",
+    "noSpaces": "Aucun espace pour le moment",
+    "noSpacesSubtext": "Créez votre premier espace pour commencer",
+    "about": "À propos des espaces",
+    "whatAreSpaces": "Qu'est-ce que les espaces ?",
+    "whatAreSpacesDesc": "Les espaces sont des environnements personnalisables pour organiser vos actifs numériques et activités.",
+    "features": "Fonctionnalités",
+    "featuresDesc": "Créez, gérez et organisez vos espaces",
+    "purchase": "Acheter",
+    "purchaseFor": "Acheter pour {{amount}} sats = ${{usd}}",
+    "checking": "Vérification...",
+    "taken": "Occupé",
+    "duration": {
+      "tenMins": "~10 min",
+      "oneHour": "~1 heure",
+      "eightHours": "~8 heures"
+    }
+  },
+  "activity": {
+    "title": "Activité"
+  },
+  "assets": {
+    "title": "Vos actifs"
+  },
+  "tokenDetails": {
+    "title": "Détails du jeton",
+    "titleWithName": "Détails de {{name}}"
+  },
+  "scanQR": {
+    "title": "Scanner QR",
+    "scanAddress": "Scanner l'adresse"
+  },
+  "authorize": {
+    "title": "Autoriser"
+  },
+  "walletSetup": {
+    "nameWallet": {
+      "title": "Nommer le portefeuille",
+      "label": "Nom du portefeuille*",
+      "placeholder": "ex. : Réserve d'investissement"
+    },
+    "importNameWallet": {
+      "title": "Importer le portefeuille",
+      "label": "Nom du portefeuille*",
+      "placeholder": "ex. : Réserve d'investissement"
+    },
+    "secureWallet": {
+      "title": "Sécuriser le portefeuille"
+    },
+    "confirmPhrase": {
+      "title": "Confirmer la phrase",
+      "wordLabel": "Mot #{{position}}"
+    },
+    "complete": {
+      "title": "Terminé"
+    },
+    "importWallet": {
+      "title": "Importer le portefeuille"
+    }
+  }
+}

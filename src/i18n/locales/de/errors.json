@@ -1,0 +1,35 @@
+{
+  "network": {
+    "failed": "Netzwerkanfrage fehlgeschlagen",
+    "timeout": "Anfragezeitüberschreitung",
+    "unavailable": "Netzwerk nicht verfügbar"
+  },
+  "wallet": {
+    "notFound": "Brieftasche nicht gefunden",
+    "locked": "Brieftasche ist gesperrt",
+    "unlockFailed": "Brieftasche konnte nicht entsperrt werden",
+    "createFailed": "Brieftasche konnte nicht erstellt werden",
+    "importFailed": "Brieftasche konnte nicht importiert werden",
+    "deleteFailed": "Brieftasche konnte nicht gelöscht werden"
+  },
+  "transaction": {
+    "failed": "Transaktion fehlgeschlagen",
+    "insufficientFunds": "Unzureichende Mittel",
+    "invalidAddress": "Ungültige Adresse",
+    "invalidAmount": "Ungültiger Betrag",
+    "networkError": "Netzwerkfehler während der Transaktion"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "invalidFormat": "Ungültiges Format",
+    "tooShort": "Wert ist zu kurz",
+    "tooLong": "Wert ist zu lang",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "invalidAddress": "Ungültiges Adressformat"
+  },
+  "generic": {
+    "unknown": "Ein unbekannter Fehler ist aufgetreten",
+    "tryAgain": "Bitte versuchen Sie es erneut",
+    "contactSupport": "Bitte kontaktieren Sie den Support, wenn das Problem weiterhin besteht"
+  }
+}

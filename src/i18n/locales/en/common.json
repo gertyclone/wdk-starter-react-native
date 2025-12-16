@@ -1,0 +1,63 @@
+{
+  "buttons": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "save": "Save",
+    "continue": "Continue",
+    "next": "Next",
+    "previous": "Previous",
+    "done": "Done",
+    "close": "Close",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "paste": "Paste",
+    "scan": "Scan",
+    "send": "Send",
+    "receive": "Receive",
+    "purchase": "Purchase"
+  },
+  "labels": {
+    "name": "Name",
+    "amount": "Amount",
+    "address": "Address",
+    "network": "Network",
+    "token": "Token",
+    "balance": "Balance",
+    "fee": "Fee",
+    "total": "Total",
+    "from": "From",
+    "to": "To",
+    "date": "Date",
+    "time": "Time",
+    "status": "Status",
+    "type": "Type",
+    "description": "Description",
+    "version": "Version",
+    "loading": "Loading...",
+    "search": "Search",
+    "noResults": "No results found"
+  },
+  "currency": {
+    "usd": "USD",
+    "sats": "sats",
+    "bitcoin": "Bitcoin"
+  },
+  "transactions": {
+    "count_one": "{{count}} transaction",
+    "count_other": "{{count}} transactions"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "network": "Network error",
+    "unknown": "Unknown error"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalid": "Invalid value",
+    "tooShort": "Too short",
+    "tooLong": "Too long"
+  }
+}

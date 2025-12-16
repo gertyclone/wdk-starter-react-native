@@ -1,5 +1,6 @@
 import Header from '@/components/header';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { Box, ChevronDown, Circle, Info, Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -17,7 +18,6 @@ import { pricingService, FiatCurrency } from '@/services/pricing-service';
 import { AssetTicker } from '@tetherto/wdk-react-native-provider';
 
 const SPACE_NAME_OPTIONS = ['usdt', 'xaut', 'pubkey'];
-const DURATION_OPTIONS = ['~10 mins', '~1 hour', '~8 hours'];
 const SPACES_API_BASE_URL = 'http://192.168.1.111:7264';
 // const SPACES_API_BASE_URL = 'http://70.251.209.207:7264';
 const SPACES_APP_NAME = 'spaces-wallet';
@@ -45,13 +45,14 @@ interface GetSpacesResponse {
 export default function SpacesScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation(['common', 'screens']);
   const [subspace, setSubspace] = useState('');
   const [spaceName, setSpaceName] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [buttonState, setButtonState] = useState<'available' | 'taken' | 'loading' | null>(null);
   const [isButtonEnabled, setIsButtonEnabled] = useState(false);
-  const [buttonLabel, setButtonLabel] = useState('Purchase');
-  const [selectedDuration, setSelectedDuration] = useState<string>('~10 mins');
+  const [buttonLabel, setButtonLabel] = useState(t('screens:spaces.purchase'));
+  const [selectedDuration, setSelectedDuration] = useState<string>(t('screens:spaces.duration.tenMins'));
   const [priceSats, setPriceSats] = useState<number | null>(null);
   const [blockFee1, setBlockFee1] = useState<number | null>(null);
   const [blockFee6, setBlockFee6] = useState<number | null>(null);
@@ -113,12 +114,12 @@ export default function SpacesScreen() {
       btcPrice: number | null
     ): string => {
       if (price === null) {
-        return 'Purchase';
+        return t('screens:spaces.purchase');
       }
 
       const blockFee = getBlockFee(duration, fee1, fee6, fee48);
       if (blockFee === null) {
-        return 'Purchase';
+        return t('screens:spaces.purchase');
       }
 
       const totalPrice = price + blockFee;
@@ -127,7 +128,7 @@ export default function SpacesScreen() {
 
       // Calculate USD: (total_price_sats / 100,000,000) * btc_price_usd
       if (btcPrice === null) {
-        return `Purchase for ${formattedSats} sats`;
+        return t('screens:spaces.purchaseForSats', { amount: formattedSats });
       }
 
       const satsPerBitcoin = 100000000;
@@ -139,9 +140,9 @@ export default function SpacesScreen() {
         maximumFractionDigits: 2,
       });
 
-      return `Purchase for ${formattedSats} sats = $${formattedUSD}`;
+      return t('screens:spaces.purchaseFor', { amount: formattedSats, usd: formattedUSD });
     },
-    [getBlockFee]
+    [getBlockFee, t]
   );
 
   // Initialize pricing service and fetch BTC price
@@ -253,7 +254,7 @@ export default function SpacesScreen() {
       if (!subspace.trim() || !spaceName) {
         setButtonState(null);
         setIsButtonEnabled(false);
-        setButtonLabel('Purchase');
+        setButtonLabel(t('screens:spaces.purchase'));
         setPriceSats(null);
         setBlockFee1(null);
         setBlockFee6(null);
@@ -263,7 +264,7 @@ export default function SpacesScreen() {
 
       setButtonState('loading');
       setIsButtonEnabled(false);
-      setButtonLabel('Checking...');
+      setButtonLabel(t('screens:spaces.checking'));
 
       const spaceNameLower = spaceName.toLowerCase();
       const url = `${SPACES_API_BASE_URL}/spaces/${spaceNameLower}/${subspace.trim()}?app=${SPACES_APP_NAME}&format=json`;
@@ -324,12 +325,12 @@ export default function SpacesScreen() {
             setBlockFee1(null);
             setBlockFee6(null);
             setBlockFee48(null);
-            setButtonLabel('Purchase');
+            setButtonLabel(t('screens:spaces.purchase'));
           }
         } else if (data.state === 'taken') {
           setButtonState('taken');
           setIsButtonEnabled(false);
-          setButtonLabel('Taken');
+          setButtonLabel(t('screens:spaces.taken'));
           setPriceSats(null);
           setBlockFee1(null);
           setBlockFee6(null);
@@ -359,7 +360,7 @@ export default function SpacesScreen() {
 
         setButtonState(null);
         setIsButtonEnabled(false);
-        setButtonLabel('Purchase');
+        setButtonLabel(t('screens:spaces.purchase'));
         setPriceSats(null);
         setBlockFee1(null);
         setBlockFee6(null);
@@ -373,7 +374,7 @@ export default function SpacesScreen() {
     }, 500); // Wait 500ms after user stops typing
 
     return () => clearTimeout(timeoutId);
-  }, [subspace, spaceName]);
+  }, [subspace, spaceName, t]);
 
   // Recalculate price when duration changes or BTC price updates
   useEffect(() => {
@@ -406,6 +407,7 @@ export default function SpacesScreen() {
     btcPriceUSD,
     calculateTotalPrice,
     getBlockFee,
+    t,
   ]);
 
   return (
@@ -423,7 +425,7 @@ export default function SpacesScreen() {
             <View style={styles.searchRow}>
               <TextInput
                 style={styles.subspaceInput}
-                placeholder="subspace"
+                placeholder={t('screens:spaces.subspace')}
                 placeholderTextColor={colors.textSecondary}
                 value={subspace}
                 onChangeText={setSubspace}
@@ -445,7 +447,11 @@ export default function SpacesScreen() {
 
             {/* Duration Radio Buttons */}
             <View style={styles.radioGroup}>
-              {DURATION_OPTIONS.map((option) => (
+              {[
+                t('screens:spaces.duration.tenMins'),
+                t('screens:spaces.duration.oneHour'),
+                t('screens:spaces.duration.eightHours'),
+              ].map((option) => (
                 <TouchableOpacity
                   key={option}
                   style={styles.radioButton}
@@ -507,7 +513,7 @@ export default function SpacesScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Box size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>My Spaces</Text>
+            <Text style={styles.sectionTitle}>{t('screens:spaces.mySpaces')}</Text>
           </View>
 
           {/* Placeholder: Replace with actual spaces data */}
@@ -537,21 +543,18 @@ export default function SpacesScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Info size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>About Spaces</Text>
+            <Text style={styles.sectionTitle}>{t('screens:spaces.about')}</Text>
           </View>
 
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>What are Spaces?</Text>
-              <Text style={styles.infoValue}>
-                Spaces are customizable environments for organizing your digital assets and
-                activities.
-              </Text>
+              <Text style={styles.infoLabel}>{t('screens:spaces.whatAreSpaces')}</Text>
+              <Text style={styles.infoValue}>{t('screens:spaces.whatAreSpacesDesc')}</Text>
             </View>
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={styles.infoLabel}>Features</Text>
-              <Text style={styles.infoValue}>Create, manage, and organize your spaces</Text>
+              <Text style={styles.infoLabel}>{t('screens:spaces.features')}</Text>
+              <Text style={styles.infoValue}>{t('screens:spaces.featuresDesc')}</Text>
             </View>
           </View>
         </View>

@@ -1,0 +1,110 @@
+{
+  "wallet": {
+    "title": "ウォレット",
+    "balance": "残高",
+    "transactions": "取引",
+    "pullToRefresh": "引いて更新"
+  },
+  "onboarding": {
+    "welcome": "ようこそ！",
+    "subtitle": "ウォレットを設定して、暗号通貨の世界を探索しましょう。"
+  },
+  "send": {
+    "title": "資金を送信",
+    "selectNetwork": "ネットワークを選択",
+    "selectToken": "トークンを選択",
+    "details": {
+      "title": "{{token}}を送信",
+      "token": "トークン：",
+      "network": "ネットワーク：",
+      "amount": "金額：",
+      "fee": "手数料：",
+      "to": "送信先：",
+      "summary": "概要"
+    }
+  },
+  "receive": {
+    "title": "受信",
+    "selectNetwork": "ネットワークを選択",
+    "selectToken": "トークンを選択",
+    "scanQR": "QRコードをスキャン",
+    "addressLabel": "{{network}}アドレス"
+  },
+  "settings": {
+    "title": "設定",
+    "walletInfo": "ウォレット情報",
+    "networkAddresses": "ネットワークアドレス",
+    "about": "について",
+    "dangerZone": "危険ゾーン",
+    "deleteWallet": "ウォレットを削除",
+    "deleteWalletConfirm": "これにより、ウォレットと関連するすべてのデータが永久に削除されます。リカバリーフレーズをバックアップしたことを確認してください。この操作は元に戻せません。",
+    "walletDeleted": "ウォレットが正常に削除されました",
+    "deleteFailed": "ウォレットの削除に失敗しました",
+    "addressCopied": "{{network}}アドレスがクリップボードにコピーされました"
+  },
+  "spaces": {
+    "title": "スペース",
+    "subspace": "サブスペース",
+    "spaceName": "スペース名",
+    "createSpace": "新しいスペースを作成",
+    "mySpaces": "マイスペース",
+    "noSpaces": "まだスペースがありません",
+    "noSpacesSubtext": "最初のスペースを作成して始めましょう",
+    "about": "スペースについて",
+    "whatAreSpaces": "スペースとは？",
+    "whatAreSpacesDesc": "スペースは、デジタル資産とアクティビティを整理するためのカスタマイズ可能な環境です。",
+    "features": "機能",
+    "featuresDesc": "スペースの作成、管理、整理",
+    "purchase": "購入",
+    "purchaseFor": "{{amount}} sats = ${{usd}}で購入",
+    "checking": "確認中...",
+    "taken": "使用中",
+    "duration": {
+      "tenMins": "~10分",
+      "oneHour": "~1時間",
+      "eightHours": "~8時間"
+    }
+  },
+  "activity": {
+    "title": "アクティビティ"
+  },
+  "assets": {
+    "title": "あなたの資産"
+  },
+  "tokenDetails": {
+    "title": "トークンの詳細",
+    "titleWithName": "{{name}}の詳細"
+  },
+  "scanQR": {
+    "title": "QRスキャン",
+    "scanAddress": "アドレスをスキャン"
+  },
+  "authorize": {
+    "title": "承認"
+  },
+  "walletSetup": {
+    "nameWallet": {
+      "title": "ウォレットに名前を付ける",
+      "label": "ウォレット名*",
+      "placeholder": "例：投資ストッシュ"
+    },
+    "importNameWallet": {
+      "title": "ウォレットをインポート",
+      "label": "ウォレット名*",
+      "placeholder": "例：投資ストッシュ"
+    },
+    "secureWallet": {
+      "title": "ウォレットを保護"
+    },
+    "confirmPhrase": {
+      "title": "フレーズを確認",
+      "wordLabel": "単語 #{{position}}"
+    },
+    "complete": {
+      "title": "完了"
+    },
+    "importWallet": {
+      "title": "ウォレットをインポート"
+    }
+  }
+}

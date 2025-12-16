@@ -11,6 +11,7 @@ import 'react-native-reanimated';
 import getChainsConfig from '@/config/get-chains-config';
 import { Toaster } from 'sonner-native';
 import { colors } from '@/constants/colors';
+import { initI18n } from '@/i18n';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,6 +28,9 @@ export default function RootLayout() {
   useEffect(() => {
     const initApp = async () => {
       try {
+        // Initialize i18n first
+        await initI18n();
+        // Initialize WDK service
         await WDKService.initialize();
       } catch (error) {
         console.error('Failed to initialize services in app layout:', error);

@@ -1,6 +1,7 @@
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
+import { useTranslation } from '@/hooks/use-translation';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import { colors } from '@/constants/colors';
 export default function CompleteScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['common', 'screens', 'errors']);
   const params = useLocalSearchParams<{ walletName: string; mnemonic: string }>();
   const { createWallet, isLoading } = useWallet();
   const [walletCreated, setWalletCreated] = useState(false);
@@ -36,16 +38,16 @@ export default function CompleteScreen() {
     } catch (error) {
       console.error('Failed to create wallet:', error);
       Alert.alert(
-        'Wallet Creation Failed',
-        'There was an issue creating your wallet. Please try again.',
-        [{ text: 'Retry', onPress: () => createWalletWithWDK() }]
+        t('screens:walletSetup.complete.creationFailed'),
+        t('screens:walletSetup.complete.creationFailedMessage'),
+        [{ text: t('common:buttons.retry'), onPress: () => createWalletWithWDK() }]
       );
     }
   };
 
   const handleGoToWallet = () => {
     if (!walletCreated) {
-      Alert.alert('Please Wait', 'Wallet is still being created...');
+      Alert.alert(t('screens:walletSetup.complete.pleaseWait'), t('screens:walletSetup.complete.creatingWallet'));
       return;
     }
     // Reset navigation stack completely - only wallet screen will remain
@@ -63,16 +65,16 @@ export default function CompleteScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         <Text style={styles.title}>
-          {generalLoadingStatus ? 'Creating Your Wallet...' : "You're All Set!"}
+          {generalLoadingStatus ? t('screens:walletSetup.complete.creating') : t('screens:walletSetup.complete.allSet')}
         </Text>
         <Text style={styles.subtitle}>
           {generalLoadingStatus
-            ? 'Setting up your secure multi-chain wallet. This will only take a moment...'
-            : 'Your wallet is ready to use. Start exploring and managing your crypto securely.'}
+            ? t('screens:walletSetup.complete.settingUp')
+            : t('screens:walletSetup.complete.ready')}
         </Text>
         {generalLoadingStatus && (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Initializing wallet...</Text>
+            <Text style={styles.loadingText}>{t('screens:walletSetup.complete.initializing')}</Text>
           </View>
         )}
       </View>
@@ -84,7 +86,7 @@ export default function CompleteScreen() {
           disabled={generalLoadingStatus}
         >
           <Text style={[styles.buttonText, generalLoadingStatus && styles.buttonTextDisabled]}>
-            {generalLoadingStatus ? 'Creating Wallet...' : 'Go To Wallet'}
+            {generalLoadingStatus ? t('screens:walletSetup.complete.creatingWallet') : t('screens:walletSetup.complete.goToWallet')}
           </Text>
         </TouchableOpacity>
       </View>

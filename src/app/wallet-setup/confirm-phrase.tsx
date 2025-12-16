@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
@@ -15,6 +16,7 @@ interface WordPosition {
 export default function ConfirmPhraseScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['common', 'screens']);
   const params = useLocalSearchParams<{
     mnemonic?: string;
     walletName?: string;
@@ -78,15 +80,15 @@ export default function ConfirmPhraseScreen() {
 
   const handleNext = () => {
     if (!isAllSelected()) {
-      Alert.alert('Select All Words', 'Please select all the required words to continue.', [
-        { text: 'OK' },
+      Alert.alert(t('screens:walletSetup.confirmPhrase.selectAllWords'), t('screens:walletSetup.confirmPhrase.selectAllWordsMessage'), [
+        { text: t('common:buttons.done') },
       ]);
       return;
     }
 
     if (!isCorrect()) {
-      Alert.alert('Incorrect Words', 'Some words are incorrect. Please try again.', [
-        { text: 'OK' },
+      Alert.alert(t('screens:walletSetup.confirmPhrase.incorrectWords'), t('screens:walletSetup.confirmPhrase.incorrectWordsMessage'), [
+        { text: t('common:buttons.done') },
       ]);
       // Reset selections for incorrect words
       const newSelections = { ...selectedWords };
@@ -129,16 +131,16 @@ export default function ConfirmPhraseScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Confirm your secret phrase</Text>
+        <Text style={styles.title}>{t('screens:walletSetup.confirmPhrase.title')}</Text>
 
         {wordPositions.map(wp => (
           <View key={wp.position} style={styles.wordSection}>
-            <Text style={styles.wordLabel}>Word #{wp.position}</Text>
+            <Text style={styles.wordLabel}>{t('screens:walletSetup.confirmPhrase.wordLabel', { position: wp.position })}</Text>
             <View style={styles.optionsContainer}>
               {wp.options.map(option => (
                 <TouchableOpacity
@@ -167,7 +169,7 @@ export default function ConfirmPhraseScreen() {
           onPress={handleNext}
         >
           <Text style={[styles.nextButtonText, !isAllSelected() && styles.nextButtonTextDisabled]}>
-            Next
+            {t('common:buttons.next')}
           </Text>
         </TouchableOpacity>
       </View>

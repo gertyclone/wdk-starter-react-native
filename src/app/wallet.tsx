@@ -2,6 +2,7 @@ import { BalanceLoader } from '@/components/BalanceLoader';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -58,6 +59,7 @@ type Transaction = {
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation(['common', 'screens']);
   const {
     wallet,
     isLoading,
@@ -196,6 +198,7 @@ export default function WalletScreen() {
             hash: tx.transactionHash,
             fiatAmount: fiatAmount,
             currency: FiatCurrency.USD,
+            typeLabel: isSent ? t('screens:wallet.transactionSent') : t('screens:wallet.transactionReceived'),
           };
         })
     );
@@ -284,7 +287,7 @@ export default function WalletScreen() {
           <View style={styles.walletIcon}>
             <Text style={styles.walletIconText}>{avatar}</Text>
           </View>
-          <Text style={styles.walletName}>{wallet?.name || 'No Wallet'}</Text>
+          <Text style={styles.walletName}>{wallet?.name || t('screens:wallet.noWallet')}</Text>
         </View>
 
         <View style={styles.headerActions}>
@@ -313,7 +316,7 @@ export default function WalletScreen() {
               onRefresh={handleRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
-              title="Pull to refresh"
+              title={t('screens:wallet.pullToRefresh')}
               titleColor={colors.textSecondary}
               progressViewOffset={insets.top}
             />
@@ -331,7 +334,7 @@ export default function WalletScreen() {
         {/* Balance */}
         {!hasWallet && !isLoading ? (
           <TouchableOpacity onPress={handleCreateWallet}>
-            <Text>Create Your First Wallet</Text>
+            <Text>{t('screens:wallet.createFirstWallet')}</Text>
           </TouchableOpacity>
         ) : (
           <View
@@ -390,26 +393,26 @@ export default function WalletScreen() {
                     <Text style={styles.assetAmount}>
                       {formatTokenAmount(asset.balance, asset.denomination as AssetTicker)}
                     </Text>
-                    <Text style={styles.assetValue}>{formatAmount(asset.usdValue)} USD</Text>
+                    <Text style={styles.assetValue}>{formatAmount(asset.usdValue)} {t('common:currency.usd')}</Text>
                   </View>
                 </TouchableOpacity>
               );
             })
           ) : (
             <View style={styles.noAssetsContainer}>
-              <Text style={styles.noAssetsText}>No assets found</Text>
+              <Text style={styles.noAssetsText}>{t('screens:wallet.noAssetsFound')}</Text>
             </View>
           )}
 
           <TouchableOpacity onPress={handleSeeAllTokens}>
-            <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.seeAllText}>{t('screens:wallet.seeAll')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Suggestions */}
         <View style={styles.suggestionsSection}>
           <View style={styles.suggestionsHeader}>
-            <Text style={styles.sectionTitle}>Suggestions</Text>
+            <Text style={styles.sectionTitle}>{t('screens:wallet.suggestions')}</Text>
           </View>
 
           <View style={styles.suggestionsGrid}>
@@ -433,7 +436,7 @@ export default function WalletScreen() {
           <View
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
           >
-            <Text style={styles.sectionTitle}>Activity</Text>
+            <Text style={styles.sectionTitle}>{t('screens:wallet.transactions')}</Text>
             {walletTransactions.isLoading ? (
               <View style={{ marginRight: 8 }}>
                 <ActivityIndicator size="small" color={colors.primary} />
@@ -450,7 +453,7 @@ export default function WalletScreen() {
                 <View style={styles.transactionInfo}>
                   <Text style={styles.transactionType}>{tx.asset}</Text>
                   <Text style={styles.transactionSubtitle}>
-                    {tx.type === 'sent' ? 'Sent' : 'Received'} • {tx.blockchain}
+                    {tx.typeLabel || (tx.type === 'sent' ? t('screens:wallet.transactionSent') : t('screens:wallet.transactionReceived'))} • {tx.blockchain}
                   </Text>
                 </View>
                 <View style={styles.transactionAmount}>
@@ -461,12 +464,12 @@ export default function WalletScreen() {
             ))
           ) : (
             <View style={styles.noAssetsContainer}>
-              <Text style={styles.noAssetsText}>No transactions yet</Text>
+              <Text style={styles.noAssetsText}>{t('screens:wallet.noTransactionsYet')}</Text>
             </View>
           )}
 
           <TouchableOpacity onPress={handleSeeAllActivity}>
-            <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.seeAllText}>{t('screens:wallet.seeAll')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -475,7 +478,7 @@ export default function WalletScreen() {
       <View style={[styles.bottomActions, { marginBottom: insets.bottom }]}>
         <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
           <ArrowUpRight size={20} color={colors.white} />
-          <Text style={styles.actionButtonText}>Send</Text>
+          <Text style={styles.actionButtonText}>{t('common:buttons.send')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.qrButton} onPress={handleQRPress}>
@@ -484,7 +487,7 @@ export default function WalletScreen() {
 
         <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
           <ArrowDownLeft size={20} color={colors.white} />
-          <Text style={styles.actionButtonText}>Receive</Text>
+          <Text style={styles.actionButtonText}>{t('common:buttons.receive')}</Text>
         </TouchableOpacity>
       </View>
     </View>

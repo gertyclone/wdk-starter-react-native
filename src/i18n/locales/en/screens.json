@@ -1,0 +1,203 @@
+{
+  "wallet": {
+    "title": "Wallet",
+    "balance": "Balance",
+    "transactions": "Transactions",
+    "pullToRefresh": "Pull to refresh",
+    "noWallet": "No Wallet",
+    "createFirstWallet": "Create Your First Wallet",
+    "noAssetsFound": "No assets found",
+    "seeAll": "See All",
+    "suggestions": "Suggestions",
+    "noTransactionsYet": "No transactions yet",
+    "transactionSent": "Sent",
+    "transactionReceived": "Received"
+  },
+  "onboarding": {
+    "welcome": "Welcome!",
+    "subtitle": "Set up your wallet and start exploring the crypto world.",
+    "createWallet": "Create Wallet",
+    "importWallet": "Import Wallet"
+  },
+  "send": {
+    "title": "Send funds",
+    "selectNetwork": "Select network",
+    "selectToken": "Select token",
+    "details": {
+      "title": "Send {{token}}",
+      "token": "Token:",
+      "network": "Network:",
+      "amount": "Amount:",
+      "fee": "Fee:",
+      "to": "To:",
+      "summary": "Summary",
+      "enterRecipientAddress": "Please enter a recipient address",
+      "enterValidAmount": "Please enter a valid amount",
+      "enterAmount": "Enter Amount",
+      "balance": "Balance:",
+      "estimatedFee": "Estimated Fee:",
+      "calculating": "Calculating...",
+      "insertAmountForGas": "Insert amount for gas fee estimation",
+      "loadingFeeEstimate": "Loading fee estimate...",
+      "useMax": "Use Max",
+      "sending": "Sending...",
+      "transactionSubmitted": "Transaction Submitted",
+      "transactionProcessing": "Your transaction has been submitted and is now processing.",
+      "maximum": "Maximum",
+      "closeAndReturn": "Close & Return to Main Screen"
+    }
+  },
+  "receive": {
+    "title": "Receive",
+    "selectNetwork": "Select network",
+    "selectToken": "Select token",
+    "scanQR": "Scan QR code",
+    "addressLabel": "Your {{network}} address",
+    "recent": "Recent",
+    "allTokens": "All tokens",
+    "noTokensFound": "No tokens found matching your search",
+    "addressCopied": "Address copied to clipboard",
+    "copyFailed": "Failed to copy address",
+    "receivingOn": "You're about to receive {{token}} on {{network}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "walletInfo": "Wallet Information",
+    "networkAddresses": "Network Addresses",
+    "about": "About",
+    "dangerZone": "Danger Zone",
+    "deleteWallet": "Delete Wallet",
+    "deleteWalletConfirm": "This will permanently delete your wallet and all associated data. Make sure you have backed up your recovery phrase. This action cannot be undone.",
+    "walletDeleted": "Wallet deleted successfully",
+    "deleteFailed": "Failed to delete wallet",
+    "addressCopied": "{{network}} address copied to clipboard",
+    "language": "Language",
+    "languageChanged": "Language changed successfully",
+    "languageChangeFailed": "Failed to change language",
+    "unknown": "Unknown",
+    "icon": "Icon",
+    "enabledAssets": "Enabled Assets",
+    "none": "None",
+    "wdkVersion": "WDK Version",
+    "latest": "Latest",
+    "notAvailable": "N/A",
+    "deleteWarning": "Deleting your wallet will remove all data from this device. Make sure you have backed up your recovery phrase before proceeding."
+  },
+  "spaces": {
+    "title": "Spaces",
+    "subspace": "subspace",
+    "spaceName": "space_name",
+    "createSpace": "Create New Space",
+    "mySpaces": "My Spaces",
+    "noSpaces": "No spaces yet",
+    "noSpacesSubtext": "Create your first space to get started",
+    "about": "About Spaces",
+    "whatAreSpaces": "What are Spaces?",
+    "whatAreSpacesDesc": "Spaces are customizable environments for organizing your digital assets and activities.",
+    "features": "Features",
+    "featuresDesc": "Create, manage, and organize your spaces",
+    "purchase": "Purchase",
+    "purchaseFor": "Purchase for {{amount}} sats = ${{usd}}",
+    "purchaseForSats": "Purchase for {{amount}} sats",
+    "checking": "Checking...",
+    "taken": "Taken",
+    "duration": {
+      "tenMins": "~10 mins",
+      "oneHour": "~1 hour",
+      "eightHours": "~8 hours"
+    }
+  },
+  "activity": {
+    "title": "Activity"
+  },
+  "assets": {
+    "title": "Your Assets",
+    "noAssetsFound": "No assets found",
+    "noAssetsSubtext": "Your wallet assets will appear here once you have a balance"
+  },
+  "tokenDetails": {
+    "title": "Token Details",
+    "titleWithName": "{{name}} Details",
+    "tokenNotFound": "Token not found or not supported"
+  },
+  "scanQR": {
+    "title": "Scan QR code to make payment.",
+    "subtitle": "Hold your phone up to the QR code.",
+    "scanAddress": "Scan address",
+    "invalidQR": "Invalid QR Code",
+    "invalidQRMessage": "The scanned QR code does not contain a valid address.",
+    "cameraPermissionRequired": "Camera Permission Required",
+    "cameraPermissionMessage": "Please allow camera access to scan QR codes for wallet addresses.",
+    "checkingPermission": "Checking camera permission...",
+    "enableCamera": "Enable Camera"
+  },
+  "authorize": {
+    "title": "Authorize Access",
+    "subtitle": "Verify your identity to access your wallet",
+    "initializing": "Initializing wallet...",
+    "useBiometric": "Use Biometric",
+    "footer": "Your wallet is encrypted and secured with your device"
+  },
+  "walletSetup": {
+    "nameWallet": {
+      "title": "Name Your Wallet",
+      "subtitle": "This name is just for you and can be changed later.",
+      "label": "Wallet Name*",
+      "placeholder": "e.g., Investment Stash",
+      "chooseAvatar": "Choose an avatar"
+    },
+    "importNameWallet": {
+      "title": "Name Your Wallet",
+      "subtitle": "This name is just for you and can be changed later.",
+      "label": "Wallet Name*",
+      "placeholder": "e.g., Investment Stash",
+      "noSeedPhrase": "No seed phrase provided. Please go back and enter your seed phrase.",
+      "importSuccess": "Your wallet has been imported successfully.",
+      "importFailed": "Import Failed"
+    },
+    "secureWallet": {
+      "title": "Secure Your Wallet",
+      "subtitle": "This secret phrase is the only way to recover your wallet. Store it safely.",
+      "warning": "Never share your secret phrase with anyone! Anyone with this phrase can access your wallet.",
+      "phraseCopied": "Secret phrase copied to clipboard",
+      "copyPhrase": "Copy Phrase",
+      "hidePhrase": "Hide Phrase",
+      "showPhrase": "Show Phrase",
+      "generating": "Generating..."
+    },
+    "confirmPhrase": {
+      "title": "Confirm your secret phrase",
+      "wordLabel": "Word #{{position}}",
+      "selectAllWords": "Select All Words",
+      "selectAllWordsMessage": "Please select all the required words to continue.",
+      "incorrectWords": "Incorrect Words",
+      "incorrectWordsMessage": "Some words are incorrect. Please try again."
+    },
+    "complete": {
+      "title": "Complete",
+      "creating": "Creating Your Wallet...",
+      "allSet": "You're All Set!",
+      "settingUp": "Setting up your secure multi-chain wallet. This will only take a moment...",
+      "ready": "Your wallet is ready to use. Start exploring and managing your crypto securely.",
+      "initializing": "Initializing wallet...",
+      "creatingWallet": "Creating Wallet...",
+      "goToWallet": "Go To Wallet",
+      "pleaseWait": "Please Wait",
+      "creationFailed": "Wallet Creation Failed",
+      "creationFailedMessage": "There was an issue creating your wallet. Please try again."
+    },
+    "importWallet": {
+      "title": "Import Wallet",
+      "emptyClipboard": "Empty Clipboard! No text found in clipboard",
+      "invalidPhrase": "Invalid Phrase! Found only {{count}} words in clipboard. Please ensure you have exactly 12 words.",
+      "pasteSuccess": "12 words have been pasted from clipboard",
+      "pasteFailed": "Could not paste from clipboard",
+      "scanText": "Scan Text",
+      "scanTextMessage": "Camera functionality would open here to scan QR code or text",
+      "incomplete": "Incomplete",
+      "incompleteMessage": "Please fill in all 12 words of your secret phrase",
+      "invalidSeedPhrase": "Invalid Seed Phrase",
+      "invalidSeedPhraseMessage": "Please check your seed phrase. Make sure all words are spelled correctly and contain only lowercase letters."
+    }
+  }
+}

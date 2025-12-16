@@ -1,0 +1,110 @@
+{
+  "wallet": {
+    "title": "Billetera",
+    "balance": "Saldo",
+    "transactions": "Transacciones",
+    "pullToRefresh": "Desliza para actualizar"
+  },
+  "onboarding": {
+    "welcome": "¡Bienvenido!",
+    "subtitle": "Configura tu billetera y comienza a explorar el mundo cripto."
+  },
+  "send": {
+    "title": "Enviar fondos",
+    "selectNetwork": "Seleccionar red",
+    "selectToken": "Seleccionar token",
+    "details": {
+      "title": "Enviar {{token}}",
+      "token": "Token:",
+      "network": "Red:",
+      "amount": "Cantidad:",
+      "fee": "Tarifa:",
+      "to": "A:",
+      "summary": "Resumen"
+    }
+  },
+  "receive": {
+    "title": "Recibir",
+    "selectNetwork": "Seleccionar red",
+    "selectToken": "Seleccionar token",
+    "scanQR": "Escanear código QR",
+    "addressLabel": "Tu dirección {{network}}"
+  },
+  "settings": {
+    "title": "Configuración",
+    "walletInfo": "Información de la Billetera",
+    "networkAddresses": "Direcciones de Red",
+    "about": "Acerca de",
+    "dangerZone": "Zona de Peligro",
+    "deleteWallet": "Eliminar Billetera",
+    "deleteWalletConfirm": "Esto eliminará permanentemente tu billetera y todos los datos asociados. Asegúrate de haber respaldado tu frase de recuperación. Esta acción no se puede deshacer.",
+    "walletDeleted": "Billetera eliminada exitosamente",
+    "deleteFailed": "Error al eliminar la billetera",
+    "addressCopied": "Dirección {{network}} copiada al portapapeles"
+  },
+  "spaces": {
+    "title": "Espacios",
+    "subspace": "subespacio",
+    "spaceName": "nombre_espacio",
+    "createSpace": "Crear Nuevo Espacio",
+    "mySpaces": "Mis Espacios",
+    "noSpaces": "Aún no hay espacios",
+    "noSpacesSubtext": "Crea tu primer espacio para comenzar",
+    "about": "Acerca de los Espacios",
+    "whatAreSpaces": "¿Qué son los Espacios?",
+    "whatAreSpacesDesc": "Los espacios son entornos personalizables para organizar tus activos digitales y actividades.",
+    "features": "Características",
+    "featuresDesc": "Crea, gestiona y organiza tus espacios",
+    "purchase": "Comprar",
+    "purchaseFor": "Comprar por {{amount}} sats = ${{usd}}",
+    "checking": "Verificando...",
+    "taken": "Ocupado",
+    "duration": {
+      "tenMins": "~10 min",
+      "oneHour": "~1 hora",
+      "eightHours": "~8 horas"
+    }
+  },
+  "activity": {
+    "title": "Actividad"
+  },
+  "assets": {
+    "title": "Tus Activos"
+  },
+  "tokenDetails": {
+    "title": "Detalles del Token",
+    "titleWithName": "Detalles de {{name}}"
+  },
+  "scanQR": {
+    "title": "Escanear QR",
+    "scanAddress": "Escanear dirección"
+  },
+  "authorize": {
+    "title": "Autorizar"
+  },
+  "walletSetup": {
+    "nameWallet": {
+      "title": "Nombrar Billetera",
+      "label": "Nombre de la Billetera*",
+      "placeholder": "ej., Caja de Inversión"
+    },
+    "importNameWallet": {
+      "title": "Importar Billetera",
+      "label": "Nombre de la Billetera*",
+      "placeholder": "ej., Caja de Inversión"
+    },
+    "secureWallet": {
+      "title": "Proteger Billetera"
+    },
+    "confirmPhrase": {
+      "title": "Confirmar Frase",
+      "wordLabel": "Palabra #{{position}}"
+    },
+    "complete": {
+      "title": "Completo"
+    },
+    "importWallet": {
+      "title": "Importar Billetera"
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "buttons": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "continue": "Continuar",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "done": "Hecho",
+    "close": "Cerrar",
+    "retry": "Reintentar",
+    "refresh": "Actualizar",
+    "copy": "Copiar",
+    "paste": "Pegar",
+    "scan": "Escanear",
+    "send": "Enviar",
+    "receive": "Recibir",
+    "purchase": "Comprar"
+  },
+  "labels": {
+    "name": "Nombre",
+    "amount": "Cantidad",
+    "address": "Dirección",
+    "network": "Red",
+    "token": "Token",
+    "balance": "Saldo",
+    "fee": "Tarifa",
+    "total": "Total",
+    "from": "De",
+    "to": "A",
+    "date": "Fecha",
+    "time": "Hora",
+    "status": "Estado",
+    "type": "Tipo",
+    "description": "Descripción",
+    "version": "Versión",
+    "loading": "Cargando...",
+    "search": "Buscar",
+    "noResults": "No se encontraron resultados"
+  },
+  "currency": {
+    "usd": "USD",
+    "sats": "sats",
+    "bitcoin": "Bitcoin"
+  },
+  "transactions": {
+    "count_one": "{{count}} transacción",
+    "count_other": "{{count}} transacciones"
+  },
+  "errors": {
+    "generic": "Ocurrió un error",
+    "network": "Error de red",
+    "unknown": "Error desconocido"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalid": "Valor inválido",
+    "tooShort": "Demasiado corto",
+    "tooLong": "Demasiado largo"
+  }
+}

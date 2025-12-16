@@ -1,0 +1,63 @@
+{
+  "buttons": {
+    "back": "Retour",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "continue": "Continuer",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "done": "Terminé",
+    "close": "Fermer",
+    "retry": "Réessayer",
+    "refresh": "Actualiser",
+    "copy": "Copier",
+    "paste": "Coller",
+    "scan": "Scanner",
+    "send": "Envoyer",
+    "receive": "Recevoir",
+    "purchase": "Acheter"
+  },
+  "labels": {
+    "name": "Nom",
+    "amount": "Montant",
+    "address": "Adresse",
+    "network": "Réseau",
+    "token": "Jeton",
+    "balance": "Solde",
+    "fee": "Frais",
+    "total": "Total",
+    "from": "De",
+    "to": "À",
+    "date": "Date",
+    "time": "Heure",
+    "status": "Statut",
+    "type": "Type",
+    "description": "Description",
+    "version": "Version",
+    "loading": "Chargement...",
+    "search": "Rechercher",
+    "noResults": "Aucun résultat trouvé"
+  },
+  "currency": {
+    "usd": "USD",
+    "sats": "sats",
+    "bitcoin": "Bitcoin"
+  },
+  "transactions": {
+    "count_one": "{{count}} transaction",
+    "count_other": "{{count}} transactions"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite",
+    "network": "Erreur réseau",
+    "unknown": "Erreur inconnue"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalid": "Valeur invalide",
+    "tooShort": "Trop court",
+    "tooLong": "Trop long"
+  }
+}

@@ -6,8 +6,11 @@ import getDisplaySymbol from '@/utils/get-display-symbol';
 import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
-import React from 'react';
+import { useTranslation } from '@/hooks/use-translation';
+import { changeLanguage, getCurrentLanguage } from '@/i18n';
+import { getLanguageName, getSupportedLanguageCodes, type SupportedLanguage } from '@/i18n/config';
+import { Copy, Globe, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
@@ -16,30 +19,51 @@ import { colors } from '@/constants/colors';
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t, i18n } = useTranslation(['common', 'screens']);
   const { wallet, clearWallet, addresses } = useWallet();
   const avatar = useWalletAvatar();
+  const [currentLanguage, setCurrentLanguage] = useState<string>(getCurrentLanguage());
+
+  useEffect(() => {
+    // Update current language when i18n language changes
+    const updateLanguage = () => {
+      setCurrentLanguage(getCurrentLanguage());
+    };
+    updateLanguage();
+  }, [i18n.language]);
+
+  const handleLanguageChange = async (languageCode: SupportedLanguage) => {
+    try {
+      await changeLanguage(languageCode);
+      setCurrentLanguage(languageCode);
+      toast.success(t('screens:settings.languageChanged'));
+    } catch (error) {
+      console.error('Failed to change language:', error);
+      toast.error(t('screens:settings.languageChangeFailed'));
+    }
+  };
 
   const handleDeleteWallet = () => {
     Alert.alert(
-      'Delete Wallet',
-      'This will permanently delete your wallet and all associated data. Make sure you have backed up your recovery phrase. This action cannot be undone.',
+      t('screens:settings.deleteWallet'),
+      t('screens:settings.deleteWalletConfirm'),
       [
         {
-          text: 'Cancel',
+          text: t('common:buttons.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Delete Wallet',
+          text: t('screens:settings.deleteWallet'),
           style: 'destructive',
           onPress: async () => {
             try {
               await clearWallet();
               await clearAvatar();
-              toast.success('Wallet deleted successfully');
+              toast.success(t('screens:settings.walletDeleted'));
               router.dismissAll('/');
             } catch (error) {
               console.error('Failed to delete wallet:', error);
-              toast.error('Failed to delete wallet');
+              toast.error(t('screens:settings.deleteFailed'));
             }
           },
         },
@@ -49,11 +73,11 @@ export default function SettingsScreen() {
 
   const handleCopyAddress = async (address: string, networkName: string) => {
     await Clipboard.setStringAsync(address);
-    toast.success(`${networkName} address copied to clipboard`);
+    toast.success(t('screens:settings.addressCopied', { network: networkName }));
   };
 
   const formatAddress = (address: string) => {
-    if (!address) return 'N/A';
+    if (!address) return t('screens:settings.notAvailable');
     if (address.length <= 15) return address;
     return `${address.slice(0, 10)}...${address.slice(-10)}`;
   };
@@ -64,7 +88,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header title="Settings" />
+      <Header title={t('screens:settings.title')} />
 
       <ScrollView
         style={styles.scrollView}
@@ -75,26 +99,61 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Wallet size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Wallet Information</Text>
+            <Text style={styles.sectionTitle}>{t('screens:settings.walletInfo')}</Text>
           </View>
 
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Name</Text>
-              <Text style={styles.infoValue}>{wallet?.name || 'Unknown'}</Text>
+              <Text style={styles.infoLabel}>{t('common:labels.name')}</Text>
+              <Text style={styles.infoValue}>{wallet?.name || t('screens:settings.unknown')}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Icon</Text>
+              <Text style={styles.infoLabel}>{t('screens:settings.icon')}</Text>
               <Text style={styles.infoValue}>{avatar}</Text>
             </View>
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={styles.infoLabel}>Enabled Assets</Text>
+              <Text style={styles.infoLabel}>{t('screens:settings.enabledAssets')}</Text>
               <Text style={styles.infoValue}>
-                {wallet?.enabledAssets?.map(asset => getDisplaySymbol(asset)).join(', ') || 'None'}
+                {wallet?.enabledAssets?.map(asset => getDisplaySymbol(asset)).join(', ') || t('screens:settings.none')}
               </Text>
             </View>
+          </View>
+        </View>
+
+        {/* Language Selection Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Globe size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>{t('screens:settings.language')}</Text>
+          </View>
+
+          <View style={styles.infoCard}>
+            {getSupportedLanguageCodes().map((langCode, index, array) => (
+              <TouchableOpacity
+                key={langCode}
+                style={[
+                  styles.infoRow,
+                  index === array.length - 1 ? styles.infoRowLast : null,
+                  currentLanguage === langCode && styles.selectedLanguageRow,
+                ]}
+                onPress={() => handleLanguageChange(langCode)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.infoLabel,
+                    currentLanguage === langCode && styles.selectedLanguageLabel,
+                  ]}
+                >
+                  {getLanguageName(langCode)}
+                </Text>
+                {currentLanguage === langCode && (
+                  <Text style={styles.selectedLanguageIndicator}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -102,7 +161,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Shield size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Network Addresses</Text>
+            <Text style={styles.sectionTitle}>{t('screens:settings.networkAddresses')}</Text>
           </View>
 
           <View style={styles.addressCard}>
@@ -131,18 +190,18 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Info size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t('screens:settings.about')}</Text>
           </View>
 
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Version</Text>
+              <Text style={styles.infoLabel}>{t('common:labels.version')}</Text>
               <Text style={styles.infoValue}>1.0.0</Text>
             </View>
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={styles.infoLabel}>WDK Version</Text>
-              <Text style={styles.infoValue}>Latest</Text>
+              <Text style={styles.infoLabel}>{t('screens:settings.wdkVersion')}</Text>
+              <Text style={styles.infoValue}>{t('screens:settings.latest')}</Text>
             </View>
           </View>
         </View>
@@ -151,17 +210,16 @@ export default function SettingsScreen() {
         <View style={styles.dangerSection}>
           <View style={styles.sectionHeader}>
             <Trash2 size={20} color={colors.danger} />
-            <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
+            <Text style={[styles.sectionTitle, styles.dangerTitle]}>{t('screens:settings.dangerZone')}</Text>
           </View>
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWallet}>
             <Trash2 size={20} color={colors.white} />
-            <Text style={styles.deleteButtonText}>Delete Wallet</Text>
+            <Text style={styles.deleteButtonText}>{t('screens:settings.deleteWallet')}</Text>
           </TouchableOpacity>
 
           <Text style={styles.warningText}>
-            Deleting your wallet will remove all data from this device. Make sure you have backed up
-            your recovery phrase before proceeding.
+            {t('screens:settings.deleteWarning')}
           </Text>
         </View>
       </ScrollView>
@@ -284,5 +342,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  selectedLanguageRow: {
+    backgroundColor: colors.tintedBackground,
+  },
+  selectedLanguageLabel: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  selectedLanguageIndicator: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: 'bold',
   },
 });

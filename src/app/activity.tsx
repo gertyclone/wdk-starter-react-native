@@ -8,10 +8,12 @@ import { FiatCurrency, pricingService } from '../services/pricing-service';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
+import { useTranslation } from '@/hooks/use-translation';
 import { colors } from '@/constants/colors';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation('screens');
   const { transactions: walletTransactions, addresses } = useWallet();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
@@ -63,7 +65,7 @@ export default function ActivityScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header isLoading={walletTransactions.isLoading} title="Activity" />
+      <Header isLoading={walletTransactions.isLoading} title={t('activity.title')} />
       <TransactionList transactions={transactions} />
     </View>
   );

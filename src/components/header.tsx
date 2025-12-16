@@ -1,4 +1,5 @@
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { ChevronLeft } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -20,6 +21,7 @@ interface HeaderProps {
 const Header = (params: HeaderProps) => {
   const { title, isLoading = false, style } = params;
   const router = useDebouncedNavigation();
+  const { t } = useTranslation('common');
 
   const handleBack = () => {
     router.back();
@@ -29,7 +31,7 @@ const Header = (params: HeaderProps) => {
     <View style={[styles.header, style]}>
       <TouchableOpacity onPress={handleBack} style={styles.backButton}>
         <ChevronLeft size={24} color={colors.primary} />
-        <Text style={styles.backText}>Back</Text>
+        <Text style={styles.backText}>{t('buttons.back')}</Text>
       </TouchableOpacity>
       <View style={styles.titleContainer}>
         <Text style={styles.title}>{title}</Text>

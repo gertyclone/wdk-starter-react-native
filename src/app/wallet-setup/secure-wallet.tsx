@@ -3,6 +3,7 @@ import { WDKService } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import { AlertCircle, ChevronLeft, Copy, Eye, EyeOff } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -16,6 +17,7 @@ import getErrorMessage from '@/utils/get-error-message';
 export default function SecureWalletScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation(['common', 'screens', 'errors']);
   const params = useLocalSearchParams<{
     walletName?: string;
     avatar?: string;
@@ -49,7 +51,7 @@ export default function SecureWalletScreen() {
       setMnemonic(words);
     } catch (error) {
       console.error('Failed to generate seed phrase', error);
-      setError(getErrorMessage(error, 'Failed to generate seed phrase. Please try again.'));
+      setError(getErrorMessage(error, t('errors:wallet.createFailed')));
       setMnemonic([]);
     } finally {
       setIsGenerating(false);
@@ -59,7 +61,7 @@ export default function SecureWalletScreen() {
   const handleCopyPhrase = async () => {
     const phraseText = mnemonic.join(' ');
     await Clipboard.setStringAsync(phraseText);
-    toast.success('Secret phrase copied to clipboard');
+    toast.success(t('screens:walletSetup.secureWallet.phraseCopied'));
   };
 
   const handleToggleVisibility = () => {
@@ -85,21 +87,20 @@ export default function SecureWalletScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Secure Your Wallet</Text>
+        <Text style={styles.title}>{t('screens:walletSetup.secureWallet.title')}</Text>
         <Text style={styles.subtitle}>
-          This secret phrase is the only way to recover your wallet. Store it safely.
+          {t('screens:walletSetup.secureWallet.subtitle')}
         </Text>
 
         <View style={styles.warningBox}>
           <AlertCircle size={20} color={colors.warning} />
           <Text style={styles.warningText}>
-            Never share your secret phrase with anyone! Anyone with this phrase can access your
-            wallet.
+            {t('screens:walletSetup.secureWallet.warning')}
           </Text>
         </View>
 
@@ -114,7 +115,7 @@ export default function SecureWalletScreen() {
               onPress={generateMnemonic}
               disabled={isGenerating}
             >
-              <Text style={styles.retryButtonText}>{isGenerating ? 'Generating...' : 'Retry'}</Text>
+              <Text style={styles.retryButtonText}>{isGenerating ? t('screens:walletSetup.secureWallet.generating') : t('common:buttons.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -129,13 +130,13 @@ export default function SecureWalletScreen() {
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.actionButton} onPress={handleCopyPhrase}>
                 <Copy size={20} color={colors.primary} />
-                <Text style={styles.actionButtonText}>Copy Phrase</Text>
+                <Text style={styles.actionButtonText}>{t('screens:walletSetup.secureWallet.copyPhrase')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionButton} onPress={handleToggleVisibility}>
                 <PhraseVisibilityIcon size={20} color={colors.primary} />
                 <Text style={styles.actionButtonText}>
-                  {showPhrase ? 'Hide Phrase' : 'Show Phrase'}
+                  {showPhrase ? t('screens:walletSetup.secureWallet.hidePhrase') : t('screens:walletSetup.secureWallet.showPhrase')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -155,7 +156,7 @@ export default function SecureWalletScreen() {
               (error || mnemonic.length === 0) && styles.nextButtonTextDisabled,
             ]}
           >
-            Next
+            {t('common:buttons.next')}
           </Text>
         </TouchableOpacity>
       </View>

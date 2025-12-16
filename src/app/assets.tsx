@@ -9,11 +9,13 @@ import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
+import { useTranslation } from '@/hooks/use-translation';
 import { colors } from '@/constants/colors';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation('screens');
   const { wallet, balances } = useWallet();
   const [assets, setAssets] = useState<Asset[]>([]);
 
@@ -86,7 +88,7 @@ export default function AssetsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header isLoading={balances.isLoading} title="Your Assets" />
+      <Header isLoading={balances.isLoading} title={t('assets.title')} />
 
       {/* Assets List */}
       <ScrollView
@@ -123,9 +125,9 @@ export default function AssetsScreen() {
           ))
         ) : (
           <View style={styles.noAssetsContainer}>
-            <Text style={styles.noAssetsText}>No assets found</Text>
+            <Text style={styles.noAssetsText}>{t('assets.noAssetsFound')}</Text>
             <Text style={styles.noAssetsSubtext}>
-              Your wallet assets will appear here once you have a balance
+              {t('assets.noAssetsSubtext')}
             </Text>
           </View>
         )}

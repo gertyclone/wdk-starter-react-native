@@ -1,0 +1,63 @@
+{
+  "buttons": {
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "continue": "Weiter",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "done": "Fertig",
+    "close": "Schließen",
+    "retry": "Wiederholen",
+    "refresh": "Aktualisieren",
+    "copy": "Kopieren",
+    "paste": "Einfügen",
+    "scan": "Scannen",
+    "send": "Senden",
+    "receive": "Empfangen",
+    "purchase": "Kaufen"
+  },
+  "labels": {
+    "name": "Name",
+    "amount": "Betrag",
+    "address": "Adresse",
+    "network": "Netzwerk",
+    "token": "Token",
+    "balance": "Guthaben",
+    "fee": "Gebühr",
+    "total": "Gesamt",
+    "from": "Von",
+    "to": "An",
+    "date": "Datum",
+    "time": "Zeit",
+    "status": "Status",
+    "type": "Typ",
+    "description": "Beschreibung",
+    "version": "Version",
+    "loading": "Lädt...",
+    "search": "Suchen",
+    "noResults": "Keine Ergebnisse gefunden"
+  },
+  "currency": {
+    "usd": "USD",
+    "sats": "sats",
+    "bitcoin": "Bitcoin"
+  },
+  "transactions": {
+    "count_one": "{{count}} Transaktion",
+    "count_other": "{{count}} Transaktionen"
+  },
+  "errors": {
+    "generic": "Ein Fehler ist aufgetreten",
+    "network": "Netzwerkfehler",
+    "unknown": "Unbekannter Fehler"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "invalid": "Ungültiger Wert",
+    "tooShort": "Zu kurz",
+    "tooLong": "Zu lang"
+  }
+}

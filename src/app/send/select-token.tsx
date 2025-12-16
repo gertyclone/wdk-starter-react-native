@@ -1,6 +1,7 @@
 import { assetConfig } from '@/config/assets';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import Header from '@/components/header';
 export default function SelectTokenScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { t } = useTranslation('screens');
   const params = useLocalSearchParams();
   const { wallet, balances } = useWallet();
 
@@ -140,7 +142,7 @@ export default function SelectTokenScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header title="Send funds" style={styles.header} />
+      <Header title={t('send.title')} style={styles.header} />
       <AssetSelector
         tokens={tokens}
         recentTokens={recentTokens}

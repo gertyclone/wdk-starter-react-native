@@ -1,0 +1,110 @@
+{
+  "wallet": {
+    "title": "Brieftasche",
+    "balance": "Guthaben",
+    "transactions": "Transaktionen",
+    "pullToRefresh": "Zum Aktualisieren ziehen"
+  },
+  "onboarding": {
+    "welcome": "Willkommen!",
+    "subtitle": "Richten Sie Ihre Brieftasche ein und erkunden Sie die Krypto-Welt."
+  },
+  "send": {
+    "title": "Geld senden",
+    "selectNetwork": "Netzwerk auswählen",
+    "selectToken": "Token auswählen",
+    "details": {
+      "title": "{{token}} senden",
+      "token": "Token:",
+      "network": "Netzwerk:",
+      "amount": "Betrag:",
+      "fee": "Gebühr:",
+      "to": "An:",
+      "summary": "Zusammenfassung"
+    }
+  },
+  "receive": {
+    "title": "Empfangen",
+    "selectNetwork": "Netzwerk auswählen",
+    "selectToken": "Token auswählen",
+    "scanQR": "QR-Code scannen",
+    "addressLabel": "Ihre {{network}} Adresse"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "walletInfo": "Brieftascheninformationen",
+    "networkAddresses": "Netzwerkadressen",
+    "about": "Über",
+    "dangerZone": "Gefahrenzone",
+    "deleteWallet": "Brieftasche löschen",
+    "deleteWalletConfirm": "Dies wird Ihre Brieftasche und alle zugehörigen Daten dauerhaft löschen. Stellen Sie sicher, dass Sie Ihren Wiederherstellungsschlüssel gesichert haben. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "walletDeleted": "Brieftasche erfolgreich gelöscht",
+    "deleteFailed": "Brieftasche konnte nicht gelöscht werden",
+    "addressCopied": "{{network}} Adresse in die Zwischenablage kopiert"
+  },
+  "spaces": {
+    "title": "Räume",
+    "subspace": "Unterraum",
+    "spaceName": "Raumname",
+    "createSpace": "Neuen Raum erstellen",
+    "mySpaces": "Meine Räume",
+    "noSpaces": "Noch keine Räume",
+    "noSpacesSubtext": "Erstellen Sie Ihren ersten Raum, um zu beginnen",
+    "about": "Über Räume",
+    "whatAreSpaces": "Was sind Räume?",
+    "whatAreSpacesDesc": "Räume sind anpassbare Umgebungen zur Organisation Ihrer digitalen Assets und Aktivitäten.",
+    "features": "Funktionen",
+    "featuresDesc": "Erstellen, verwalten und organisieren Sie Ihre Räume",
+    "purchase": "Kaufen",
+    "purchaseFor": "Kaufen für {{amount}} sats = ${{usd}}",
+    "checking": "Überprüfe...",
+    "taken": "Belegt",
+    "duration": {
+      "tenMins": "~10 Min",
+      "oneHour": "~1 Stunde",
+      "eightHours": "~8 Stunden"
+    }
+  },
+  "activity": {
+    "title": "Aktivität"
+  },
+  "assets": {
+    "title": "Ihre Assets"
+  },
+  "tokenDetails": {
+    "title": "Token-Details",
+    "titleWithName": "{{name}} Details"
+  },
+  "scanQR": {
+    "title": "QR scannen",
+    "scanAddress": "Adresse scannen"
+  },
+  "authorize": {
+    "title": "Autorisieren"
+  },
+  "walletSetup": {
+    "nameWallet": {
+      "title": "Brieftasche benennen",
+      "label": "Brieftaschenname*",
+      "placeholder": "z.B. Investitionsreserve"
+    },
+    "importNameWallet": {
+      "title": "Brieftasche importieren",
+      "label": "Brieftaschenname*",
+      "placeholder": "z.B. Investitionsreserve"
+    },
+    "secureWallet": {
+      "title": "Brieftasche sichern"
+    },
+    "confirmPhrase": {
+      "title": "Phrase bestätigen",
+      "wordLabel": "Wort #{{position}}"
+    },
+    "complete": {
+      "title": "Abgeschlossen"
+    },
+    "importWallet": {
+      "title": "Brieftasche importieren"
+    }
+  }
+}

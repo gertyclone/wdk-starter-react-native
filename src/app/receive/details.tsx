@@ -1,6 +1,7 @@
 import { QRCode } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useTranslation } from '@/hooks/use-translation';
 import * as Clipboard from 'expo-clipboard';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -32,10 +33,10 @@ export default function ReceiveQRCodeScreen() {
   const handleCopyAddress = useCallback(async () => {
     try {
       await Clipboard.setStringAsync(address);
-      toast.success('Address copied to clipboard');
+      toast.success(t('screens:receive.addressCopied'));
     } catch (error) {
       console.error('Error copying address:', error);
-      toast.error('Failed to copy address');
+      toast.error(t('screens:receive.copyFailed'));
     }
   }, [address]);
 
@@ -55,9 +56,9 @@ export default function ReceiveQRCodeScreen() {
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <ArrowLeft size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common:buttons.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Receive funds</Text>
+        <Text style={styles.headerTitle}>{t('screens:receive.title')}</Text>
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
           <X size={24} color={colors.primary} />
         </TouchableOpacity>
@@ -66,13 +67,13 @@ export default function ReceiveQRCodeScreen() {
       <View style={styles.content}>
         <View style={styles.titleSection}>
           <Text style={styles.title}>
-            You&apos;re about to receive {tokenName} on {networkName}
+            {t('screens:receive.receivingOn', { token: tokenName, network: networkName })}
           </Text>
         </View>
 
         <QRCode
           value={address}
-          label="Scan QR code"
+          label={t('screens:receive.scanQR')}
           size={200}
           color={colors.primary}
           containerStyle={styles.qrSection}
@@ -92,7 +93,7 @@ export default function ReceiveQRCodeScreen() {
               activeOpacity={0.7}
             >
               <Copy size={20} color={colors.white} />
-              <Text style={styles.actionButtonText}>Copy</Text>
+              <Text style={styles.actionButtonText}>{t('common:buttons.copy')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
