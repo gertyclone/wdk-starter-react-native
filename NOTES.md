@@ -16,7 +16,7 @@ nvm use v22.21.1
 
 "@ton/core": "^0.62.0",
 
-npm install --legacy-peer-deps 
+//npm install --legacy-peer-deps 
 npm install --ignore-scripts
 
 .env
@@ -25,9 +25,13 @@ rm -rf android && rm -rf ios
 
 npm run prebuild:clean
 
+npm run postinstall
+
 npm run gen:bundle
 
 // Check md5 hash of the wdk-worklet.mobile.bundle.js file
+// md5 node_modules/@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js
+
 
 npm run android
 

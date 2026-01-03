@@ -3,6 +3,7 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Box, ChevronDown, Circle, Info, Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -14,7 +15,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { pricingService, FiatCurrency } from '@/services/pricing-service';
-import { AssetTicker } from '@tetherto/wdk-react-native-provider';
+import {
+  AssetTicker,
+  NetworkType,
+  useWallet,
+  WDKService,
+} from '@tetherto/wdk-react-native-provider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import getChainsConfig from '@/config/get-chains-config';
 
 const SPACE_NAME_OPTIONS = ['usdt', 'xaut', 'pubkey'];
 const DURATION_OPTIONS = ['~10 mins', '~1 hour', '~8 hours'];
@@ -29,6 +37,7 @@ interface SpaceAvailabilityResponse {
   '6_block_fee'?: number; // Block fee for ~1 hour in sats
   '48_block_fee'?: number; // Block fee for ~8 hours in sats
   handle?: string;
+  id?: number; // quote_id from API
   [key: string]: any;
 }
 
@@ -45,6 +54,7 @@ interface GetSpacesResponse {
 export default function SpacesScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
+  const { wallet, addresses, balances } = useWallet();
   const [subspace, setSubspace] = useState('');
   const [spaceName, setSpaceName] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -58,6 +68,17 @@ export default function SpacesScreen() {
   const [blockFee48, setBlockFee48] = useState<number | null>(null);
   const [spaceNameOptions, setSpaceNameOptions] = useState<string[]>(SPACE_NAME_OPTIONS);
   const [btcPriceUSD, setBtcPriceUSD] = useState<number | null>(null);
+  const [quoteId, setQuoteId] = useState<number | null>(null);
+  const [handle, setHandle] = useState<string | null>(null);
+  const [isConfirmationMode, setIsConfirmationMode] = useState(false);
+  const [purchaseData, setPurchaseData] = useState<{
+    taproot_address: string;
+    handle: string;
+    total_price: number;
+    expiring_blockheight: number;
+  } | null>(null);
+  const [showTxHexModal, setShowTxHexModal] = useState(false);
+  const [txHex, setTxHex] = useState<string>('');
 
   // Placeholder handlers - customize these based on your needs
   const handleCreateSpace = () => {
@@ -70,14 +91,519 @@ export default function SpacesScreen() {
     console.log('Space pressed:', spaceId);
   };
 
-  const handlePurchase = () => {
-    // TODO: Implement purchase functionality
-    console.log('Purchase pressed', { subspace, spaceName });
+  const handlePurchase = async () => {
+    console.log('[Spaces] Purchase button pressed', {
+      subspace,
+      spaceName,
+      quoteId,
+      handle,
+      priceSats,
+      selectedDuration,
+    });
+
+    // If already in confirmation mode, handle sending the transaction
+    if (isConfirmationMode) {
+      if (!purchaseData || !quoteId) {
+        console.error('[Spaces] Missing purchase data or quoteId');
+        Alert.alert('Error', 'Missing purchase information. Please try again.');
+        return;
+      }
+
+      setButtonState('loading');
+      setIsButtonEnabled(false);
+      setButtonLabel('Composing Transaction...');
+
+      try {
+        // Get Bitcoin account through WDKService
+        if (!wallet) {
+          throw new Error('Wallet not available');
+        }
+
+        // Get script_type from chain config to determine which method to use
+        const chainsConfig = getChainsConfig();
+        const bitcoinConfig = chainsConfig.bitcoin;
+        const scriptType = bitcoinConfig?.script_type || 'P2WPKH'; // Default to P2WPKH
+
+        console.log('[Spaces] Script type from config:', scriptType);
+        console.log('[Spaces] Composing transaction:', {
+          to: purchaseData.taproot_address,
+          value: purchaseData.total_price,
+          scriptType,
+        });
+
+        // Debug: Log account info to help diagnose UTXO issues
+        // The error "No unspent outputs available" means the account at index 0
+        // doesn't have UTXOs, or there's a network/Electrum server mismatch
+        console.log('[Spaces] Using account index 0 for transaction');
+        console.log('[Spaces] Network: SEGWIT (Bitcoin)');
+
+        // Get the Bitcoin address from addresses (same as settings page)
+        // This is the address that should be used for transactions
+        // The settings page uses accountIndex=0 via resolveWalletAddresses()
+        const bitcoinAddress = addresses?.[NetworkType.SEGWIT];
+        if (!bitcoinAddress) {
+          throw new Error('Bitcoin address not available. Please ensure wallet is initialized.');
+        }
+        console.log(
+          '[Spaces] Using Bitcoin address from addresses[NetworkType.SEGWIT]:',
+          bitcoinAddress
+        );
+        console.log(
+          '[Spaces] Using account index 0 (same as settings page via resolveWalletAddresses)'
+        );
+
+        // Use the appropriate method based on script_type:
+        // - P2TR (Taproot): Use quoteSendByNetworkWithMemoTX (requires memo)
+        // - P2WPKH (Native SegWit): Use quoteSendByNetworkTX (no memo required)
+        // We use account index 0, which matches what resolveWalletAddresses() uses
+        // This ensures we're using the same address that's displayed on the settings page
+        // Pass amount in satoshis directly (WDKService will handle conversion internally)
+        // Note: Both methods use confirmationTarget: 1 by default.
+        // TODO: Update WDKService to accept conf_target parameter and use getConfTarget(selectedDuration)
+        // to match the user's selected duration.
+        let transactionHex: string;
+
+        if (scriptType === 'P2TR') {
+          // P2TR (Taproot) - use memo method
+          const quoteOptions = {
+            network: NetworkType.SEGWIT,
+            accountIndex: 0,
+            amount: purchaseData.total_price,
+            recipientAddress: purchaseData.taproot_address,
+            asset: AssetTicker.BTC,
+            memo: purchaseData.handle,
+          };
+          console.log(
+            '[Spaces] quoteSendByNetworkWithMemoTX options:',
+            JSON.stringify(quoteOptions, null, 2)
+          );
+          transactionHex = await WDKService.quoteSendByNetworkWithMemoTX(
+            quoteOptions.network,
+            quoteOptions.accountIndex,
+            quoteOptions.amount,
+            quoteOptions.recipientAddress,
+            quoteOptions.asset,
+            quoteOptions.memo
+          );
+        } else {
+          // P2WPKH (Native SegWit) - use non-memo method
+          const quoteOptions = {
+            network: NetworkType.SEGWIT,
+            accountIndex: 0,
+            amount: purchaseData.total_price,
+            recipientAddress: purchaseData.taproot_address,
+            asset: AssetTicker.BTC,
+          };
+          console.log(
+            '[Spaces] quoteSendByNetworkTX options:',
+            JSON.stringify(quoteOptions, null, 2)
+          );
+
+          // Check balance before attempting transaction (including fees)
+          const btcBalance = balances?.list?.find(
+            (b) => b.networkType === NetworkType.SEGWIT && b.denomination === AssetTicker.BTC
+          );
+          // Convert balance from BTC to satoshis (balance.value is in BTC, multiply by 100M)
+          const balanceBTC = btcBalance ? parseFloat(btcBalance.value) : 0;
+          const balanceSats = balanceBTC * 100000000;
+
+          // Estimate transaction fee to check if we have enough balance
+          let estimatedFee = 0;
+          let totalRequired = quoteOptions.amount;
+          try {
+            const feeQuote = await WDKService.quoteSendByNetwork(
+              quoteOptions.network,
+              quoteOptions.accountIndex,
+              quoteOptions.amount / 100000000, // Convert to BTC for quote
+              quoteOptions.recipientAddress,
+              quoteOptions.asset
+            );
+            // Fee is returned in base units (BTC), convert to satoshis
+            estimatedFee = feeQuote * 100000000;
+            totalRequired = quoteOptions.amount + estimatedFee;
+          } catch (feeError) {
+            console.warn('[Spaces] Could not estimate fee, using amount only:', feeError);
+            // If fee estimation fails, we'll let the transaction attempt proceed
+            // and it will fail with a more specific error
+          }
+
+          console.log('[Spaces] Balance check:', {
+            balanceBTC: balanceBTC.toFixed(8),
+            balanceSats: Math.round(balanceSats),
+            requestedAmount: quoteOptions.amount,
+            requestedAmountBTC: (quoteOptions.amount / 100000000).toFixed(8),
+            estimatedFee: Math.round(estimatedFee),
+            estimatedFeeBTC: (estimatedFee / 100000000).toFixed(8),
+            totalRequired: Math.round(totalRequired),
+            totalRequiredBTC: (totalRequired / 100000000).toFixed(8),
+            sufficient: balanceSats >= totalRequired,
+          });
+
+          if (balanceSats < totalRequired) {
+            const shortfall = totalRequired - balanceSats;
+            console.error('[Spaces] Insufficient balance (including fees):', {
+              balanceBTC: balanceBTC.toFixed(8),
+              balanceSats: Math.round(balanceSats),
+              requestedAmount: quoteOptions.amount,
+              estimatedFee: Math.round(estimatedFee),
+              totalRequired: Math.round(totalRequired),
+              shortfall: Math.round(shortfall),
+              shortfallBTC: (shortfall / 100000000).toFixed(8),
+            });
+            throw new Error(
+              `Insufficient balance. Have ${Math.round(balanceSats)} sats, need ${Math.round(totalRequired)} sats (${quoteOptions.amount} amount + ${Math.round(estimatedFee)} fee, shortfall: ${Math.round(shortfall)} sats)`
+            );
+          }
+
+          transactionHex = await WDKService.quoteSendByNetworkTX(
+            quoteOptions.network,
+            quoteOptions.accountIndex,
+            quoteOptions.amount,
+            quoteOptions.recipientAddress,
+            quoteOptions.asset
+          );
+        }
+
+        // Log full transaction hex for verification
+        console.log('[Spaces] Full transaction hex:', transactionHex);
+        console.log('[Spaces] Transaction hex length:', transactionHex.length);
+        console.log('[Spaces] Transaction hex generated:', transactionHex.substring(0, 50) + '...');
+
+        // Display transaction hex in modal
+        setTxHex(transactionHex);
+        setShowTxHexModal(true);
+
+        // Reset button state while showing modal
+        setButtonState('available');
+        setIsButtonEnabled(true);
+
+        // Send PUT request to confirm purchase
+        const spaceNameLower = spaceName.toLowerCase();
+        const url = `${SPACES_API_BASE_URL}/spaces/${spaceNameLower}/${subspace.trim()}?app=${SPACES_APP_NAME}&format=json`;
+        const startTime = Date.now();
+        console.log(`[Spaces API] PUT ${url}`);
+
+        const requestBody = {
+          quote_id: quoteId,
+        };
+
+        console.log('[Spaces API] PUT request body:', JSON.stringify(requestBody, null, 2));
+
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `[Spaces API] PUT ${url} - HTTP error! status: ${response.status} (${duration}ms)`,
+            errorText
+          );
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`[Spaces API] PUT ${url} - Success (${duration}ms)`, data);
+
+        // Store job_id and handle in local storage
+        if (data.job_id && data.handle) {
+          const storageKey = `spaces_purchase_${data.job_id}`;
+          const storageData = {
+            job_id: data.job_id,
+            handle: data.handle,
+            quote_id: data.quote_id,
+            timestamp: Date.now(),
+          };
+          await AsyncStorage.setItem(storageKey, JSON.stringify(storageData));
+          console.log('[Spaces] Stored purchase data in AsyncStorage:', storageKey, storageData);
+        }
+
+        // Reset confirmation mode
+        setIsConfirmationMode(false);
+        setPurchaseData(null);
+        setButtonState('available');
+        setIsButtonEnabled(true);
+
+        // Recalculate button label
+        if (priceSats !== null) {
+          const blockFee = getBlockFee(selectedDuration, blockFee1, blockFee6, blockFee48);
+          if (blockFee !== null && btcPriceUSD !== null) {
+            const totalLabel = calculateTotalPrice(
+              priceSats,
+              blockFee1,
+              blockFee6,
+              blockFee48,
+              selectedDuration,
+              btcPriceUSD
+            );
+            setButtonLabel(totalLabel);
+          }
+        }
+      } catch (error) {
+        console.error('[Spaces] Error in confirmation flow:', error);
+
+        // Enhanced error logging for insufficient balance
+        if (error instanceof Error && error.message.includes('Insufficient balance')) {
+          const btcBalance = balances?.list?.find(
+            (b) => b.networkType === NetworkType.SEGWIT && b.denomination === AssetTicker.BTC
+          );
+          // Convert balance from BTC to satoshis (balance.value is in BTC, multiply by 100M)
+          const balanceBTC = btcBalance ? parseFloat(btcBalance.value) : 0;
+          const balanceSats = balanceBTC * 100000000;
+          const requestedAmount = purchaseData?.total_price || 0;
+
+          console.error('[Spaces] Insufficient balance details:', {
+            errorMessage: error.message,
+            balanceBTC: balanceBTC.toFixed(8),
+            balanceSats: Math.round(balanceSats),
+            requestedAmount,
+            requestedAmountBTC: (requestedAmount / 100000000).toFixed(8),
+            shortfall: Math.round(requestedAmount - balanceSats),
+            shortfallBTC: ((requestedAmount - balanceSats) / 100000000).toFixed(8),
+            fromAddress: addresses?.[NetworkType.SEGWIT],
+            recipientAddress: purchaseData?.taproot_address,
+          });
+        } else {
+          console.error('[Spaces] Transaction error details:', {
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorStack: error instanceof Error ? error.stack : undefined,
+            purchaseData,
+            fromAddress: addresses?.[NetworkType.SEGWIT],
+          });
+        }
+
+        Alert.alert(
+          'Error',
+          error instanceof Error ? error.message : 'Failed to process transaction'
+        );
+        setButtonState('available');
+        setIsButtonEnabled(true);
+        // Restore button label
+        if (purchaseData && btcPriceUSD !== null) {
+          const formattedSats = purchaseData.total_price.toLocaleString();
+          const satsPerBitcoin = 100000000;
+          const usdAmount = (purchaseData.total_price / satsPerBitcoin) * btcPriceUSD;
+          const formattedUSD = usdAmount.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+          setButtonLabel(
+            `Send ${formattedSats} sats = $${formattedUSD} for ${purchaseData.handle}`
+          );
+        } else if (purchaseData) {
+          const formattedSats = purchaseData.total_price.toLocaleString();
+          setButtonLabel(`Send ${formattedSats} sats for ${purchaseData.handle}`);
+        }
+      }
+      return;
+    }
+
+    // Validate required data
+    if (!priceSats) {
+      console.error('[Spaces] Missing priceSats');
+      Alert.alert('Error', 'Price information is missing. Please try again.');
+      return;
+    }
+
+    if (!handle) {
+      console.error('[Spaces] Missing handle');
+      Alert.alert('Error', 'Handle information is missing. Please try again.');
+      return;
+    }
+
+    if (quoteId === null) {
+      console.error('[Spaces] Missing quoteId');
+      Alert.alert('Error', 'Quote ID is missing. Please try again.');
+      return;
+    }
+
+    const blockFee = getBlockFee(selectedDuration, blockFee1, blockFee6, blockFee48);
+    if (blockFee === null) {
+      console.error('[Spaces] Block fee not available for duration:', selectedDuration);
+      Alert.alert('Error', 'Block fee not available. Please select a duration.');
+      return;
+    }
+
+    setButtonState('loading');
+    setIsButtonEnabled(false);
+    setButtonLabel('Processing...');
+
+    const spaceNameLower = spaceName.toLowerCase();
+    const url = `${SPACES_API_BASE_URL}/spaces/${spaceNameLower}/${subspace.trim()}?app=${SPACES_APP_NAME}&format=json`;
+    const startTime = Date.now();
+    console.log(`[Spaces API] POST ${url}`);
+
+    try {
+      const confTarget = getConfTarget(selectedDuration);
+      const requestBody = {
+        block_fee: blockFee,
+        handle: handle,
+        price: priceSats,
+        quote_id: quoteId,
+        conf_target: confTarget,
+      };
+
+      console.log('[Spaces API] POST request body:', JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[Spaces API] POST ${url} - HTTP error! status: ${response.status} (${duration}ms)`,
+          errorText
+        );
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`[Spaces API] POST ${url} - Success (${duration}ms)`, data);
+
+      // Store purchase data and enter confirmation mode
+      setPurchaseData({
+        taproot_address: data.taproot_address,
+        handle: data.handle,
+        total_price: data.total_price,
+        expiring_blockheight: data.expiring_blockheight,
+      });
+      setIsConfirmationMode(true);
+
+      // Calculate USD equivalent for button label
+      const totalPrice = data.total_price;
+      const formattedSats = totalPrice.toLocaleString();
+
+      if (btcPriceUSD !== null) {
+        const satsPerBitcoin = 100000000;
+        const usdAmount = (totalPrice / satsPerBitcoin) * btcPriceUSD;
+        const formattedUSD = usdAmount.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        // Update button label with USD
+        const confirmLabel = `Send ${formattedSats} sats = $${formattedUSD} for ${data.handle}`;
+        setButtonLabel(confirmLabel);
+      } else {
+        // Update button label without USD if price not available
+        const confirmLabel = `Send ${formattedSats} sats for ${data.handle}`;
+        setButtonLabel(confirmLabel);
+      }
+      setIsButtonEnabled(true);
+      setButtonState('available');
+    } catch (error) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      console.error(`[Spaces API] POST ${url} - Failed (${duration}ms):`, error);
+
+      setButtonState(null);
+      setIsButtonEnabled(false);
+      setButtonLabel('Purchase');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to process purchase');
+    }
   };
 
   const handleSelectSpaceName = (option: string) => {
     setSpaceName(option);
     setShowDropdown(false);
+  };
+
+  // Helper function to shorten address for display
+  const shortenAddress = (address: string): string => {
+    if (address.length <= 13) {
+      return address; // If address is already short, return as-is
+    }
+    return `${address.substring(0, 8)}...${address.substring(address.length - 5)}`;
+  };
+
+  // Handle cancel purchase - sends DELETE request
+  const handleCancelPurchase = async () => {
+    if (!purchaseData || !quoteId || !handle) {
+      console.error('[Spaces] Missing data for cancel purchase');
+      return;
+    }
+
+    const spaceNameLower = spaceName.toLowerCase();
+    const url = `${SPACES_API_BASE_URL}/spaces/${spaceNameLower}/${subspace.trim()}?app=${SPACES_APP_NAME}&format=json`;
+    const startTime = Date.now();
+    console.log(`[Spaces API] DELETE ${url}`);
+
+    try {
+      const requestBody = {
+        quote_id: quoteId,
+        handle: handle,
+      };
+
+      console.log('[Spaces API] DELETE request body:', JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[Spaces API] DELETE ${url} - HTTP error! status: ${response.status} (${duration}ms)`,
+          errorText
+        );
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`[Spaces API] DELETE ${url} - Success (${duration}ms)`, data);
+
+      // Reset confirmation mode and clear purchase data
+      setIsConfirmationMode(false);
+      setPurchaseData(null);
+
+      // Reset button state to initial
+      setButtonState('available');
+      setIsButtonEnabled(true);
+
+      // Recalculate button label based on current price and duration
+      if (priceSats !== null) {
+        const blockFee = getBlockFee(selectedDuration, blockFee1, blockFee6, blockFee48);
+        if (blockFee !== null && btcPriceUSD !== null) {
+          const totalLabel = calculateTotalPrice(
+            priceSats,
+            blockFee1,
+            blockFee6,
+            blockFee48,
+            selectedDuration,
+            btcPriceUSD
+          );
+          setButtonLabel(totalLabel);
+        }
+      }
+    } catch (error) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      console.error(`[Spaces API] DELETE ${url} - Failed (${duration}ms):`, error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to cancel purchase');
+    }
   };
 
   // Get the appropriate block fee based on selected duration
@@ -101,6 +627,20 @@ export default function SpacesScreen() {
     },
     []
   );
+
+  // Get the confirmation target based on selected duration
+  const getConfTarget = useCallback((duration: string): number => {
+    switch (duration) {
+      case '~10 mins':
+        return 1; // 1_block_fee
+      case '~1 hour':
+        return 6; // 6_block_fee
+      case '~8 hours':
+        return 48; // 48_block_fee
+      default:
+        return 1;
+    }
+  }, []);
 
   // Calculate total price (price + fee) and format button label
   const calculateTotalPrice = useCallback(
@@ -294,11 +834,29 @@ export default function SpacesScreen() {
         if (data.state === 'available') {
           setButtonState('available');
           setIsButtonEnabled(true);
+          setIsConfirmationMode(false); // Reset confirmation mode
+          setPurchaseData(null); // Clear previous purchase data
 
           // Store price and block fees if available
           // The recalculation useEffect will update the button label
           if (data.price !== undefined && data.price !== null) {
             setPriceSats(data.price);
+
+            // Store handle and quote_id (id field)
+            if (data.handle) {
+              setHandle(data.handle);
+              console.log('[Spaces] Stored handle:', data.handle);
+            } else {
+              setHandle(null);
+            }
+
+            if (data.id !== undefined && data.id !== null) {
+              setQuoteId(data.id);
+              console.log('[Spaces] Stored quoteId:', data.id);
+            } else {
+              setQuoteId(null);
+            }
+
             // Block fees can be 0, so check for undefined/null specifically
             const fee1Value =
               data['1_block_fee'] !== undefined && data['1_block_fee'] !== null
@@ -316,7 +874,7 @@ export default function SpacesScreen() {
             setBlockFee6(fee6Value);
             setBlockFee48(fee48Value);
             console.log(
-              `[Spaces] API response: price=${data.price}, 1_block_fee=${fee1Value}, 6_block_fee=${fee6Value}, 48_block_fee=${fee48Value}`
+              `[Spaces] API response: price=${data.price}, handle=${data.handle}, id=${data.id}, 1_block_fee=${fee1Value}, 6_block_fee=${fee6Value}, 48_block_fee=${fee48Value}`
             );
             // Don't set button label here - let the recalculation useEffect handle it
           } else {
@@ -324,6 +882,8 @@ export default function SpacesScreen() {
             setBlockFee1(null);
             setBlockFee6(null);
             setBlockFee48(null);
+            setHandle(null);
+            setQuoteId(null);
             setButtonLabel('Purchase');
           }
         } else if (data.state === 'taken') {
@@ -334,6 +894,10 @@ export default function SpacesScreen() {
           setBlockFee1(null);
           setBlockFee6(null);
           setBlockFee48(null);
+          setIsConfirmationMode(false);
+          setPurchaseData(null);
+          setHandle(null);
+          setQuoteId(null);
         } else {
           // Unknown state
           setButtonState(null);
@@ -343,6 +907,10 @@ export default function SpacesScreen() {
           setBlockFee1(null);
           setBlockFee6(null);
           setBlockFee48(null);
+          setIsConfirmationMode(false);
+          setPurchaseData(null);
+          setHandle(null);
+          setQuoteId(null);
         }
       } catch (error) {
         const endTime = Date.now();
@@ -364,6 +932,10 @@ export default function SpacesScreen() {
         setBlockFee1(null);
         setBlockFee6(null);
         setBlockFee48(null);
+        setIsConfirmationMode(false);
+        setPurchaseData(null);
+        setHandle(null);
+        setQuoteId(null);
       }
     };
 
@@ -380,8 +952,9 @@ export default function SpacesScreen() {
     if (buttonState === 'available' && priceSats !== null) {
       const blockFee = getBlockFee(selectedDuration, blockFee1, blockFee6, blockFee48);
       if (blockFee !== null) {
+        const totalPriceSats = priceSats + blockFee;
         console.log(
-          `[Spaces] Recalculating price: duration=${selectedDuration}, price=${priceSats}, blockFee=${blockFee}, btcPrice=${btcPriceUSD}`
+          `[Spaces] Recalculating price: duration=${selectedDuration}, price=${priceSats}, blockFee=${blockFee}, totalPriceSats=${totalPriceSats}, btcPriceUSD=${btcPriceUSD}`
         );
         const totalLabel = calculateTotalPrice(
           priceSats,
@@ -443,31 +1016,45 @@ export default function SpacesScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Duration Radio Buttons */}
-            <View style={styles.radioGroup}>
-              {DURATION_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={styles.radioButton}
-                  onPress={() => setSelectedDuration(option)}
-                  activeOpacity={0.7}
-                >
-                  {selectedDuration === option ? (
-                    <Circle size={20} color={colors.primary} fill={colors.primary} />
-                  ) : (
-                    <Circle size={20} color={colors.textSecondary} />
-                  )}
-                  <Text
-                    style={[
-                      styles.radioLabel,
-                      selectedDuration === option && styles.radioLabelSelected,
-                    ]}
+            {/* Duration Radio Buttons - Hidden in confirmation mode */}
+            {!isConfirmationMode && (
+              <View style={styles.radioGroup}>
+                {DURATION_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={styles.radioButton}
+                    onPress={() => setSelectedDuration(option)}
+                    activeOpacity={0.7}
                   >
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    {selectedDuration === option ? (
+                      <Circle size={20} color={colors.primary} fill={colors.primary} />
+                    ) : (
+                      <Circle size={20} color={colors.textSecondary} />
+                    )}
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        selectedDuration === option && styles.radioLabelSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Confirmation message - Shown in confirmation mode */}
+            {isConfirmationMode && purchaseData && (
+              <View style={styles.confirmationMessage}>
+                <Text style={styles.confirmationText}>
+                  Send {purchaseData.total_price.toLocaleString()} sats to{' '}
+                  {shortenAddress(purchaseData.taproot_address)} before block{' '}
+                  {purchaseData.expiring_blockheight} to complete the purchase of{' '}
+                  {purchaseData.handle}.
+                </Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[
@@ -488,8 +1075,45 @@ export default function SpacesScreen() {
                 {buttonLabel}
               </Text>
             </TouchableOpacity>
+
+            {/* Cancel Purchase button - Shown in confirmation mode */}
+            {isConfirmationMode && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCancelPurchase}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel Purchase</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
+
+        {/* Transaction Hex Modal */}
+        <Modal
+          visible={showTxHexModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowTxHexModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Transaction Hex</Text>
+              <ScrollView style={styles.txHexContainer}>
+                <Text style={styles.txHexText} selectable>
+                  {txHex}
+                </Text>
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.modalDismissButton}
+                onPress={() => setShowTxHexModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalDismissButtonText}>Dismiss</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Create Space Section */}
         <View style={styles.section}>
@@ -796,6 +1420,21 @@ const styles = StyleSheet.create({
   purchaseButtonTextDisabled: {
     color: colors.textSecondary,
   },
+  cancelButton: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -831,5 +1470,56 @@ const styles = StyleSheet.create({
   dropdownOptionTextSelected: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  confirmationMessage: {
+    backgroundColor: colors.cardDark,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  confirmationText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  txHexContainer: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 12,
+    maxHeight: 400,
+    marginBottom: 16,
+  },
+  txHexText: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: colors.text,
+    lineHeight: 18,
+  },
+  modalDismissButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDismissButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.black,
   },
 });

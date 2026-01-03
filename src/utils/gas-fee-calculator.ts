@@ -8,7 +8,8 @@ export interface GasFeeEstimate {
 const QUOTE_RECIPIENTS = {
   [AssetTicker.BTC]: {
     networks: {
-      [NetworkType.SEGWIT]: 'bc1qh96eg54ddu4q2cmn0n6g8uymuqlw402jndphu9',
+      // [NetworkType.SEGWIT]: 'bc1qh96eg54ddu4q2cmn0n6g8uymuqlw402jndphu9',
+      [NetworkType.SEGWIT]: 'bc1pcp2p7nzg8kknr42w6yel8k7hpy5tedjpacnwlvtfhzgmaq6u4qnq06nhac',
     },
   },
   [AssetTicker.USDT]: {
