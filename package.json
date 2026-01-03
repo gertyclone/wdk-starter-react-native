@@ -4,7 +4,7 @@
   "version": "1.0.0-alpha.1",
   "scripts": {
     "start": "expo start --dev-client",
-    "android": "expo run:android",
+    "android": "npm run rebuild-wdk-bundle && expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
@@ -13,6 +13,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "gen:bundle": "npm --prefix node_modules/@tetherto/pear-wrk-wdk run gen:mobile-bundle",
+    "rebuild-wdk-bundle": "./scripts/rebuild-wdk-bundle.sh",
     "postinstall": "node scripts/fix-secret-manager-bundle.js",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean"
@@ -103,5 +104,9 @@
   "peerDependencies": {
     "react": "19.1.0",
     "react-native": "0.81.4"
+  },
+  "overrides": {
+    "@spacesops/wdk-wallet-btc": "file:/Users/i830671/git/wdk-wallet-btc",
+    "@wdk/wallet-btc": "file:/Users/i830671/git/wdk-wallet-btc"
   }
 }
