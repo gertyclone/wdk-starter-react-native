@@ -119,12 +119,35 @@ export default function SpacesScreen() {
           throw new Error('Wallet not available');
         }
 
-        // Get script_type from chain config to determine which method to use
-        const chainsConfig = getChainsConfig();
-        const bitcoinConfig = chainsConfig.bitcoin;
-        const scriptType = bitcoinConfig?.script_type || 'P2WPKH'; // Default to P2WPKH
+        // Get the Bitcoin address from addresses (same as settings page)
+        // This is the address that should be used for transactions
+        // The settings page uses accountIndex=0 via resolveWalletAddresses()
+        const bitcoinAddress = addresses?.[NetworkType.SEGWIT];
+        if (!bitcoinAddress) {
+          throw new Error('Bitcoin address not available. Please ensure wallet is initialized.');
+        }
 
-        console.log('[Spaces] Script type from config:', scriptType);
+        // Detect script type dynamically from the wallet address
+        // P2TR (Taproot) addresses start with bc1p (mainnet) or tb1p (testnet)
+        // P2WPKH (Native SegWit) addresses start with bc1q (mainnet) or tb1q (testnet)
+        // P2PKH addresses start with 1 (mainnet) or m/n (testnet)
+        let scriptType: 'P2TR' | 'P2WPKH' | 'P2PKH';
+        const addressLower = bitcoinAddress.toLowerCase();
+        if (addressLower.startsWith('bc1p') || addressLower.startsWith('tb1p')) {
+          scriptType = 'P2TR';
+        } else if (addressLower.startsWith('bc1q') || addressLower.startsWith('tb1q')) {
+          scriptType = 'P2WPKH';
+        } else if (addressLower.startsWith('1') || addressLower.startsWith('m') || addressLower.startsWith('n')) {
+          scriptType = 'P2PKH';
+        } else {
+          // Fallback to config if address format is unrecognized
+          const chainsConfig = getChainsConfig();
+          const bitcoinConfig = chainsConfig.bitcoin;
+          scriptType = (bitcoinConfig?.script_type as 'P2TR' | 'P2WPKH' | 'P2PKH') || 'P2WPKH';
+        }
+
+        console.log('[Spaces] Script type detected from address:', scriptType);
+        console.log('[Spaces] Bitcoin address:', bitcoinAddress);
         console.log('[Spaces] Composing transaction:', {
           to: purchaseData.taproot_address,
           value: purchaseData.total_price,
@@ -136,14 +159,6 @@ export default function SpacesScreen() {
         // doesn't have UTXOs, or there's a network/Electrum server mismatch
         console.log('[Spaces] Using account index 0 for transaction');
         console.log('[Spaces] Network: SEGWIT (Bitcoin)');
-
-        // Get the Bitcoin address from addresses (same as settings page)
-        // This is the address that should be used for transactions
-        // The settings page uses accountIndex=0 via resolveWalletAddresses()
-        const bitcoinAddress = addresses?.[NetworkType.SEGWIT];
-        if (!bitcoinAddress) {
-          throw new Error('Bitcoin address not available. Please ensure wallet is initialized.');
-        }
         console.log(
           '[Spaces] Using Bitcoin address from addresses[NetworkType.SEGWIT]:',
           bitcoinAddress
@@ -177,6 +192,64 @@ export default function SpacesScreen() {
             '[Spaces] quoteSendByNetworkWithMemoTX options:',
             JSON.stringify(quoteOptions, null, 2)
           );
+
+          // Check balance before attempting transaction (including fees)
+          const btcBalance = balances?.list?.find(
+            (b) => b.networkType === NetworkType.SEGWIT && b.denomination === AssetTicker.BTC
+          );
+          // Convert balance from BTC to satoshis (balance.value is in BTC, multiply by 100M)
+          const balanceBTC = btcBalance ? parseFloat(btcBalance.value) : 0;
+          const balanceSats = balanceBTC * 100000000;
+
+          // Estimate transaction fee to check if we have enough balance
+          let estimatedFee = 0;
+          let totalRequired = quoteOptions.amount;
+          try {
+            const feeQuote = await WDKService.quoteSendByNetworkWithMemo(
+              quoteOptions.network,
+              quoteOptions.accountIndex,
+              quoteOptions.amount / 100000000, // Convert to BTC for quote
+              quoteOptions.recipientAddress,
+              quoteOptions.asset,
+              quoteOptions.memo
+            );
+            // Fee is returned in base units (BTC), convert to satoshis
+            estimatedFee = feeQuote * 100000000;
+            totalRequired = quoteOptions.amount + estimatedFee;
+          } catch (feeError) {
+            console.warn('[Spaces] Could not estimate fee, using amount only:', feeError);
+            // If fee estimation fails, we'll let the transaction attempt proceed
+            // and it will fail with a more specific error
+          }
+
+          console.log('[Spaces] Balance check (P2TR):', {
+            balanceBTC: balanceBTC.toFixed(8),
+            balanceSats: Math.round(balanceSats),
+            requestedAmount: quoteOptions.amount,
+            requestedAmountBTC: (quoteOptions.amount / 100000000).toFixed(8),
+            estimatedFee: Math.round(estimatedFee),
+            estimatedFeeBTC: (estimatedFee / 100000000).toFixed(8),
+            totalRequired: Math.round(totalRequired),
+            totalRequiredBTC: (totalRequired / 100000000).toFixed(8),
+            sufficient: balanceSats >= totalRequired,
+          });
+
+          if (balanceSats < totalRequired) {
+            const shortfall = totalRequired - balanceSats;
+            console.error('[Spaces] Insufficient balance (including fees) - P2TR:', {
+              balanceBTC: balanceBTC.toFixed(8),
+              balanceSats: Math.round(balanceSats),
+              requestedAmount: quoteOptions.amount,
+              estimatedFee: Math.round(estimatedFee),
+              totalRequired: Math.round(totalRequired),
+              shortfall: Math.round(shortfall),
+              shortfallBTC: (shortfall / 100000000).toFixed(8),
+            });
+            throw new Error(
+              `Insufficient balance. Have ${Math.round(balanceSats)} sats, need ${Math.round(totalRequired)} sats (${quoteOptions.amount} amount + ${Math.round(estimatedFee)} fee, shortfall: ${Math.round(shortfall)} sats)`
+            );
+          }
+
           transactionHex = await WDKService.quoteSendByNetworkWithMemoTX(
             quoteOptions.network,
             quoteOptions.accountIndex,

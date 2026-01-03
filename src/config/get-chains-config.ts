@@ -68,10 +68,13 @@ const getChainsConfig = () => {
       network: 'bitcoin',
       host: '192.168.1.110',
       port: 50001,
-      // bip: 86, // Use BIP84 for native SegWit (m/84') addresses instead of BIP44 (m/44')
-      // script_type: 'P2TR', // Use P2TR for Taproot (m/86') addresses instead of P2WPKH (m/84')
-      bip: 84, // Use BIP84 for native SegWit (m/84') addresses instead of BIP44 (m/44')
-      script_type: 'P2WPKH', // Use P2WPKH for native SegWit (m/84') addresses instead of P2TR (m/86')
+      // For P2TR (Taproot) addresses (bc1p...), use BIP-86
+      // For P2WPKH (Native SegWit) addresses (bc1q...), use BIP-84
+      // Currently configured for P2TR wallet: bc1pcp2p7nzg8kknr42w6yel8k7hpy5tedjpacnwlvtfhzgmaq6u4qnq06nhac
+      bip: 86, // Use BIP86 for Taproot (m/86') addresses
+      script_type: 'P2TR', // Use P2TR for Taproot addresses
+      // bip: 84, // Use BIP84 for native SegWit (m/84') addresses
+      // script_type: 'P2WPKH', // Use P2WPKH for native SegWit addresses
     },
     // tron: {
     //   chainId: 3448148188,
