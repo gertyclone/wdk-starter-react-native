@@ -1,7 +1,8 @@
 import Header from '@/components/header';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Box, ChevronDown, Circle, Info, Plus } from 'lucide-react-native';
+import { Box, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Info } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Alert,
   Modal,
@@ -23,6 +24,8 @@ import {
 } from '@tetherto/wdk-react-native-provider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import getChainsConfig from '@/config/get-chains-config';
+import * as Clipboard from 'expo-clipboard';
+import { toast } from 'sonner-native';
 
 const SPACE_NAME_OPTIONS = ['usdt', 'xaut', 'pubkey'];
 const DURATION_OPTIONS = ['~10 mins', '~1 hour', '~8 hours'];
@@ -79,16 +82,381 @@ export default function SpacesScreen() {
   } | null>(null);
   const [showTxHexModal, setShowTxHexModal] = useState(false);
   const [txHex, setTxHex] = useState<string>('');
+  const [txHexData, setTxHexData] = useState<{
+    scriptType: 'P2TR' | 'P2WPKH' | 'P2PKH';
+    network: NetworkType;
+    accountIndex: number;
+    amount: number;
+    recipientAddress: string;
+    asset: AssetTicker;
+    memo?: string;
+  } | null>(null);
+  const [mySpaces, setMySpaces] = useState<
+    {
+      subspace: string;
+      spaceName: string;
+      handle: string;
+      status:
+        | 'purchasing'
+        | 'purchased'
+        | 'pending'
+        | 'processing'
+        | 'confirmed'
+        | 'expired'
+        | 'cancelled';
+      jobId?: number;
+    }[]
+  >([]);
+  const [jobPollingState, setJobPollingState] = useState<
+    Record<
+      number,
+      {
+        delay: number;
+        nextCheckTime: number;
+        attempt: number;
+        isPolling: boolean;
+      }
+    >
+  >({});
+  const [currentJobId, setCurrentJobId] = useState<number | null>(null);
+  const [currentJobData, setCurrentJobData] = useState<{
+    handle: string;
+    subspace: string;
+    spaceName: string;
+  } | null>(null);
 
   // Placeholder handlers - customize these based on your needs
-  const handleCreateSpace = () => {
-    // TODO: Implement create space functionality
-    console.log('Create space pressed');
-  };
-
   const handleSpacePress = (spaceId: string) => {
     // TODO: Navigate to space details or open space
     console.log('Space pressed:', spaceId);
+  };
+
+  const [isFindPurchaseExpanded, setIsFindPurchaseExpanded] = useState(true);
+  const [isAboutSpacesExpanded, setIsAboutSpacesExpanded] = useState(false);
+
+  const handleSubspaceSelect = (subspace: string, spaceName: string) => {
+    router.push({
+      pathname: '/subspace',
+      params: {
+        subspace: subspace,
+        spaceName: spaceName,
+      },
+    });
+  };
+
+
+  const getSpaceStatus = (subspace: string, spaceName: string): string => {
+    const space = mySpaces.find((s) => s.subspace === subspace && s.spaceName === spaceName);
+    if (!space) return 'Unknown';
+
+    const statusMap: Record<string, string> = {
+      purchasing: 'Purchasing',
+      pending: 'Pending',
+      processing: 'Processing',
+      confirmed: 'Confirmed',
+      expired: 'Expired',
+      cancelled: 'Cancelled',
+      purchased: 'Purchased',
+    };
+
+    return statusMap[space.status] || 'Unknown';
+  };
+
+  const getTimeUntilNextCheck = (subspace: string, spaceName: string): number | null => {
+    const space = mySpaces.find((s) => s.subspace === subspace && s.spaceName === spaceName);
+    if (!space || !space.jobId) return null;
+
+    const pollingState = jobPollingState[space.jobId];
+    if (!pollingState || !pollingState.isPolling) return null;
+
+    const now = Date.now();
+    const timeRemaining = pollingState.nextCheckTime - now;
+    if (timeRemaining <= 0) return 0;
+    // Return minutes (rounded to 1 decimal place)
+    return Math.round((timeRemaining / 60000) * 10) / 10;
+  };
+
+  const handleCopyTxHex = async () => {
+    try {
+      await Clipboard.setStringAsync(txHex);
+      toast.success('Transaction hex copied to clipboard');
+    } catch (error) {
+      console.error('[Spaces] Failed to copy transaction hex:', error);
+      Alert.alert('Error', 'Failed to copy transaction hex to clipboard');
+    }
+  };
+
+  const pollJobStatus = async (
+    jobId: number,
+    spaceName: string,
+    subspace: string,
+    options: {
+      initialDelay?: number;
+      maxDelay?: number;
+      maxAttempts?: number;
+    } = {}
+  ) => {
+    const {
+      initialDelay = 2000, // Start with 2 seconds
+      maxDelay = 300000, // Max 5 minutes
+      maxAttempts = 100,
+    } = options;
+
+    let delay = initialDelay;
+    let attempt = 0;
+
+    const url = `${SPACES_API_BASE_URL}/api/jobs/${jobId}?space=${encodeURIComponent(spaceName)}`;
+
+    const updatePollingState = (nextCheckTime: number, isPolling: boolean) => {
+      setJobPollingState((prev) => ({
+        ...prev,
+        [jobId]: {
+          delay,
+          nextCheckTime,
+          attempt,
+          isPolling,
+        },
+      }));
+    };
+
+    const updateSpaceStatus = (status: string) => {
+      setMySpaces((prev) =>
+        prev.map((space) =>
+          space.subspace === subspace && space.spaceName === spaceName.toLowerCase()
+            ? { ...space, status: status as any, jobId }
+            : space
+        )
+      );
+    };
+
+    while (attempt < maxAttempts) {
+      try {
+        // Set next check time (for first attempt, this is immediate, then uses delay)
+        const nextCheckTime = attempt === 0 ? Date.now() : Date.now() + delay;
+        updatePollingState(nextCheckTime, true);
+        console.log(
+          `[Spaces] Polling job ${jobId} - attempt ${attempt + 1}${attempt > 0 ? `, next check in ${delay}ms` : ' (immediate)'}`
+        );
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to fetch job status');
+        }
+
+        const job = data.job;
+
+        // Map job status to space status
+        const statusMap: Record<string, string> = {
+          pending_payment: 'pending',
+          processing: 'processing',
+          confirmed: 'confirmed',
+          expired: 'expired',
+          cancelled: 'cancelled',
+        };
+
+        const mappedStatus = statusMap[job.status] || 'purchasing';
+        updateSpaceStatus(mappedStatus);
+
+        // Check for terminal states
+        const terminalStates = ['confirmed', 'expired', 'cancelled'];
+        if (terminalStates.includes(job.status)) {
+          updatePollingState(nextCheckTime, false);
+          console.log(`[Spaces] Job ${jobId} completed with status: ${job.status}`);
+          if (job.status === 'confirmed') {
+            toast.success(`Purchase confirmed for ${subspace}@${spaceName}`);
+          } else if (job.status === 'expired') {
+            toast.error(`Purchase expired for ${subspace}@${spaceName}`);
+          } else if (job.status === 'cancelled') {
+            toast.info(`Purchase cancelled for ${subspace}@${spaceName}`);
+          }
+          return data;
+        }
+
+        // Check expiration
+        if (job.is_expired) {
+          updateSpaceStatus('expired');
+          updatePollingState(nextCheckTime, false);
+          toast.error(`Purchase expired for ${subspace}@${spaceName}`);
+          return { ...data, expired: true };
+        }
+
+        console.log(`[Spaces] Job ${jobId}: ${job.status} (attempt ${attempt + 1})`);
+        if (job.blocks_until_expiration !== null) {
+          console.log(`  Blocks until expiration: ${job.blocks_until_expiration}`);
+        }
+
+        // Exponential backoff: double delay, up to maxDelay
+        delay = Math.min(delay * 2, maxDelay);
+        attempt++;
+
+        // Set next check time for the next poll (after exponential backoff)
+        const nextCheckTimeAfterDelay = Date.now() + delay;
+        updatePollingState(nextCheckTimeAfterDelay, true);
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } catch (error) {
+        console.error(`[Spaces] Polling error (attempt ${attempt + 1}):`, error);
+        const nextCheckTime = Date.now() + delay;
+        updatePollingState(nextCheckTime, true);
+
+        // On error, wait before retrying (with exponential backoff)
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * 2, maxDelay);
+        attempt++;
+
+        // If max attempts reached, stop polling
+        if (attempt >= maxAttempts) {
+          updatePollingState(nextCheckTime, false);
+          toast.error(`Max polling attempts reached for ${subspace}@${spaceName}`);
+          return null;
+        }
+      }
+    }
+
+    updatePollingState(Date.now(), false);
+    toast.error(`Max polling attempts (${maxAttempts}) reached for ${subspace}@${spaceName}`);
+    return null;
+  };
+
+  const handleSimulate = async () => {
+    console.log('[Spaces] Simulate transaction:', txHex);
+    console.log('[Spaces] Current jobId:', currentJobId);
+    console.log('[Spaces] Current jobData:', currentJobData);
+
+    // Close the modal first
+    setShowTxHexModal(false);
+
+    if (!currentJobId || !currentJobData) {
+      console.warn('[Spaces] Cannot simulate: missing jobId or jobData', {
+        currentJobId,
+        currentJobData,
+      });
+      toast.info('Simulation will be implemented soon');
+      return;
+    }
+
+    const { handle, subspace: currentSubspace, spaceName: currentSpaceName } = currentJobData;
+
+    // Add subspace to My Spaces and start polling
+    const newSpace = {
+      subspace: currentSubspace,
+      spaceName: currentSpaceName,
+      handle,
+      status: 'pending' as const,
+      jobId: currentJobId,
+    };
+
+    console.log('[Spaces] Adding space to My Spaces:', newSpace);
+
+    setMySpaces((prev) => {
+      const existingIndex = prev.findIndex(
+        (s) => s.subspace === newSpace.subspace && s.spaceName === newSpace.spaceName
+      );
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], jobId: currentJobId };
+        return updated;
+      }
+      return [...prev, newSpace];
+    });
+
+    console.log('[Spaces] Starting polling for job:', currentJobId);
+
+    // Start polling
+    pollJobStatus(currentJobId, currentSpaceName, currentSubspace).catch((error) => {
+      console.error('[Spaces] Polling failed:', error);
+    });
+
+    toast.info('Simulation started - monitoring job status');
+  };
+
+  const handleBroadcast = async () => {
+    if (!txHexData) {
+      Alert.alert('Error', 'Transaction data not available');
+      return;
+    }
+
+    try {
+      setButtonState('loading');
+      setIsButtonEnabled(false);
+      setButtonLabel('Broadcasting...');
+
+      let txHash: string;
+
+      if (txHexData.scriptType === 'P2TR' && txHexData.memo) {
+        // P2TR transaction with memo
+        txHash = await WDKService.sendByNetworkWithMemo(
+          txHexData.network,
+          txHexData.accountIndex,
+          txHexData.amount / 100000000, // Convert to BTC
+          txHexData.recipientAddress,
+          txHexData.asset,
+          txHexData.memo
+        );
+      } else {
+        // P2WPKH transaction without memo
+        txHash = await WDKService.sendByNetwork(
+          txHexData.network,
+          txHexData.accountIndex,
+          txHexData.amount / 100000000, // Convert to BTC
+          txHexData.recipientAddress,
+          txHexData.asset
+        );
+      }
+
+      console.log('[Spaces] Transaction broadcasted successfully:', txHash);
+      toast.success(`Transaction broadcasted! Hash: ${txHash.substring(0, 16)}...`);
+
+      // Add subspace to My Spaces and start polling if we have jobId
+      if (currentJobId && purchaseData) {
+        const currentSpaceName = spaceName.toLowerCase();
+        const currentSubspace = subspace.trim();
+        const newSpace = {
+          subspace: currentSubspace,
+          spaceName: currentSpaceName,
+          handle: purchaseData.handle,
+          status: 'processing' as const,
+          jobId: currentJobId,
+        };
+
+        setMySpaces((prev) => {
+          const existingIndex = prev.findIndex(
+            (s) => s.subspace === newSpace.subspace && s.spaceName === newSpace.spaceName
+          );
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              jobId: currentJobId,
+              status: 'processing',
+            };
+            return updated;
+          }
+          return [...prev, newSpace];
+        });
+
+        // Start polling
+        pollJobStatus(currentJobId, currentSpaceName, currentSubspace).catch((error) => {
+          console.error('[Spaces] Polling failed:', error);
+        });
+      }
+
+      // Close the modal
+      setShowTxHexModal(false);
+
+      // Perform simulation after broadcasting (this will also start polling)
+      await handleSimulate();
+    } catch (error) {
+      console.error('[Spaces] Failed to broadcast transaction:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to broadcast transaction';
+      Alert.alert('Broadcast Failed', errorMessage);
+      setButtonState('available');
+      setIsButtonEnabled(true);
+    }
   };
 
   const handlePurchase = async () => {
@@ -137,7 +505,11 @@ export default function SpacesScreen() {
           scriptType = 'P2TR';
         } else if (addressLower.startsWith('bc1q') || addressLower.startsWith('tb1q')) {
           scriptType = 'P2WPKH';
-        } else if (addressLower.startsWith('1') || addressLower.startsWith('m') || addressLower.startsWith('n')) {
+        } else if (
+          addressLower.startsWith('1') ||
+          addressLower.startsWith('m') ||
+          addressLower.startsWith('n')
+        ) {
           scriptType = 'P2PKH';
         } else {
           // Fallback to config if address format is unrecognized
@@ -342,6 +714,48 @@ export default function SpacesScreen() {
         console.log('[Spaces] Transaction hex length:', transactionHex.length);
         console.log('[Spaces] Transaction hex generated:', transactionHex.substring(0, 50) + '...');
 
+        // Store transaction data for broadcasting
+        if (scriptType === 'P2TR') {
+          setTxHexData({
+            scriptType: 'P2TR',
+            network: NetworkType.SEGWIT,
+            accountIndex: 0,
+            amount: purchaseData.total_price,
+            recipientAddress: purchaseData.taproot_address,
+            asset: AssetTicker.BTC,
+            memo: purchaseData.handle,
+          });
+        } else {
+          setTxHexData({
+            scriptType: 'P2WPKH',
+            network: NetworkType.SEGWIT,
+            accountIndex: 0,
+            amount: purchaseData.total_price,
+            recipientAddress: purchaseData.taproot_address,
+            asset: AssetTicker.BTC,
+          });
+        }
+
+        // Add subspace to My Spaces list with "purchasing" status
+        const newSpace = {
+          subspace: subspace.trim(),
+          spaceName: spaceName.toLowerCase(),
+          handle: purchaseData.handle,
+          status: 'purchasing' as const,
+        };
+        setMySpaces((prev) => {
+          // Check if this subspace already exists, if so update it, otherwise add it
+          const existingIndex = prev.findIndex(
+            (s) => s.subspace === newSpace.subspace && s.spaceName === newSpace.spaceName
+          );
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = newSpace;
+            return updated;
+          }
+          return [...prev, newSpace];
+        });
+
         // Display transaction hex in modal
         setTxHex(transactionHex);
         setShowTxHexModal(true);
@@ -384,6 +798,22 @@ export default function SpacesScreen() {
 
         const data = await response.json();
         console.log(`[Spaces API] PUT ${url} - Success (${duration}ms)`, data);
+
+        // Store job_id and related data for polling
+        if (data.job_id) {
+          setCurrentJobId(data.job_id);
+          setCurrentJobData({
+            handle: data.handle || purchaseData.handle,
+            subspace: subspace.trim(),
+            spaceName: spaceName.toLowerCase(),
+          });
+          console.log(
+            '[Spaces] Job ID received:',
+            data.job_id,
+            'with handle:',
+            data.handle || purchaseData.handle
+          );
+        }
 
         // Store job_id and handle in local storage
         if (data.job_id && data.handle) {
@@ -1020,6 +1450,86 @@ export default function SpacesScreen() {
     return () => clearTimeout(timeoutId);
   }, [subspace, spaceName]);
 
+  // Persist mySpaces to AsyncStorage whenever it changes
+  useEffect(() => {
+    const persistMySpaces = async () => {
+      try {
+        await AsyncStorage.setItem('mySpaces', JSON.stringify(mySpaces));
+        console.log('[Spaces] Persisted mySpaces to AsyncStorage:', mySpaces.length, 'spaces');
+      } catch (error) {
+        console.error('[Spaces] Failed to persist mySpaces:', error);
+      }
+    };
+
+    if (mySpaces.length > 0) {
+      persistMySpaces();
+    }
+  }, [mySpaces]);
+
+  // Load mySpaces from AsyncStorage
+  const loadMySpaces = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem('mySpaces');
+      if (stored) {
+        const loadedSpaces = JSON.parse(stored);
+        console.log('[Spaces] Loaded mySpaces from AsyncStorage:', loadedSpaces.length, 'spaces');
+        setMySpaces(loadedSpaces);
+
+        // Resume polling for active jobs
+        const activeSpaces = loadedSpaces.filter(
+          (space: { jobId?: number; status: string }) =>
+            space.jobId && !['confirmed', 'expired', 'cancelled'].includes(space.status)
+        );
+
+        if (activeSpaces.length > 0) {
+          console.log('[Spaces] Resuming polling for', activeSpaces.length, 'active jobs');
+          activeSpaces.forEach(
+            (space: { jobId: number; subspace: string; spaceName: string }) => {
+              pollJobStatus(space.jobId, space.spaceName, space.subspace).catch((error) => {
+                console.error(
+                  '[Spaces] Failed to resume polling for job',
+                  space.jobId,
+                  ':',
+                  error
+                );
+              });
+            }
+          );
+        }
+      }
+    } catch (error) {
+      console.error('[Spaces] Failed to load mySpaces from AsyncStorage:', error);
+    }
+  }, []);
+
+  // Load mySpaces on component mount
+  useEffect(() => {
+    loadMySpaces();
+  }, [loadMySpaces]);
+
+  // Reload mySpaces when screen comes into focus (e.g., after deleting a space)
+  useFocusEffect(
+    useCallback(() => {
+      loadMySpaces();
+    }, [loadMySpaces])
+  );
+
+  // Update countdown timers every second for active polling jobs
+  useEffect(() => {
+    const activeJobs = Object.keys(jobPollingState).filter(
+      (jobId) => jobPollingState[Number(jobId)]?.isPolling
+    );
+
+    if (activeJobs.length === 0) return;
+
+    const interval = setInterval(() => {
+      // Force re-render to update countdown timers
+      setJobPollingState((prev) => ({ ...prev }));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [jobPollingState]);
+
   // Recalculate price when duration changes or BTC price updates
   useEffect(() => {
     if (buttonState === 'available' && priceSats !== null) {
@@ -1065,8 +1575,23 @@ export default function SpacesScreen() {
       >
         {/* Search Section */}
         <View style={styles.section}>
-          <View style={styles.searchCard}>
-            <View style={styles.searchRow}>
+          <TouchableOpacity
+            style={styles.collapsibleHeader}
+            onPress={() => setIsFindPurchaseExpanded(!isFindPurchaseExpanded)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.collapsibleHeaderLeft}>
+              {isFindPurchaseExpanded ? (
+                <ChevronDown size={20} color={colors.textSecondary} />
+              ) : (
+                <ChevronRight size={20} color={colors.textSecondary} />
+              )}
+              <Text style={styles.collapsibleHeaderText}>Find & Purchase</Text>
+            </View>
+          </TouchableOpacity>
+          {isFindPurchaseExpanded && (
+            <View style={styles.searchCard}>
+              <View style={styles.searchRow}>
               <TextInput
                 style={styles.subspaceInput}
                 placeholder="subspace"
@@ -1159,7 +1684,8 @@ export default function SpacesScreen() {
                 <Text style={styles.cancelButtonText}>Cancel Purchase</Text>
               </TouchableOpacity>
             )}
-          </View>
+            </View>
+          )}
         </View>
 
         {/* Transaction Hex Modal */}
@@ -1177,28 +1703,42 @@ export default function SpacesScreen() {
                   {txHex}
                 </Text>
               </ScrollView>
-              <TouchableOpacity
-                style={styles.modalDismissButton}
-                onPress={() => setShowTxHexModal(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.modalDismissButtonText}>Dismiss</Text>
-              </TouchableOpacity>
+              <View style={styles.modalButtonRow}>
+                <TouchableOpacity
+                  style={styles.modalCopyButton}
+                  onPress={handleCopyTxHex}
+                  activeOpacity={0.7}
+                >
+                  <Copy size={18} color={colors.black} />
+                  <Text style={styles.modalCopyButtonText}>Copy</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalDismissButton}
+                  onPress={() => setShowTxHexModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalDismissButtonText}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.modalButtonRow, styles.modalButtonRowSpacing]}>
+                <TouchableOpacity
+                  style={styles.modalSimulateButton}
+                  onPress={handleSimulate}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalSimulateButtonText}>Simulate</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalBroadcastButton}
+                  onPress={handleBroadcast}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalBroadcastButtonText}>Broadcast</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
-
-        {/* Create Space Section */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={handleCreateSpace}
-            activeOpacity={0.7}
-          >
-            <Plus size={20} color={colors.primary} />
-            <Text style={styles.createButtonText}>Create New Space</Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Spaces List Section */}
         <View style={styles.section}>
@@ -1207,37 +1747,74 @@ export default function SpacesScreen() {
             <Text style={styles.sectionTitle}>My Spaces</Text>
           </View>
 
-          {/* Placeholder: Replace with actual spaces data */}
-          <View style={styles.infoCard}>
-            <Text style={styles.emptyText}>No spaces yet</Text>
-            <Text style={styles.emptySubtext}>Create your first space to get started</Text>
-          </View>
-
-          {/* Example space item (uncomment when you have data) */}
-          {/* {spaces.map((space) => (
-            <TouchableOpacity
-              key={space.id}
-              style={styles.spaceCard}
-              onPress={() => handleSpacePress(space.id)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.spaceContent}>
-                <Text style={styles.spaceName}>{space.name}</Text>
-                <Text style={styles.spaceDescription}>{space.description}</Text>
+          {mySpaces.length === 0 ? (
+            <View style={styles.infoCard}>
+              <Text style={styles.emptyText}>No spaces yet</Text>
+              <Text style={styles.emptySubtext}>Search for and purchase a space above.</Text>
+            </View>
+          ) : (
+            <View style={styles.tableContainer}>
+              {/* Table Header */}
+              <View style={styles.tableHeader}>
+                <Text style={styles.tableHeaderText}>Space</Text>
+                <Text style={styles.tableHeaderText}>Status</Text>
+                <Text style={styles.tableHeaderText}>Next Check</Text>
               </View>
-              <Settings size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ))} */}
+              {/* Table Rows */}
+              {mySpaces.map((space, index) => {
+                const timeUntilNextCheck = getTimeUntilNextCheck(space.subspace, space.spaceName);
+                const statusText = getSpaceStatus(space.subspace, space.spaceName);
+                const showCountdown = timeUntilNextCheck !== null;
+
+                return (
+                  <View
+                    key={`${space.spaceName}-${space.subspace}-${index}`}
+                    style={[styles.tableRow, index === mySpaces.length - 1 && styles.tableRowLast]}
+                  >
+                    <TouchableOpacity
+                      style={styles.tableCellSpace}
+                      onPress={() => handleSubspaceSelect(space.subspace, space.spaceName)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.tableCellSpaceText}>
+                        {space.subspace}@{space.spaceName}
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={styles.tableCellStatus}>
+                      <Text style={styles.tableCellStatusText}>{statusText}</Text>
+                    </View>
+                    <View style={styles.tableCellNextCheck}>
+                      <Text style={styles.tableCellNextCheckText}>
+                        {showCountdown && timeUntilNextCheck !== null
+                          ? `${timeUntilNextCheck} min`
+                          : '-'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Info Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Info size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>About Spaces</Text>
-          </View>
-
-          <View style={styles.infoCard}>
+          <TouchableOpacity
+            style={styles.collapsibleHeader}
+            onPress={() => setIsAboutSpacesExpanded(!isAboutSpacesExpanded)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.collapsibleHeaderLeft}>
+              {isAboutSpacesExpanded ? (
+                <ChevronDown size={20} color={colors.textSecondary} />
+              ) : (
+                <ChevronRight size={20} color={colors.textSecondary} />
+              )}
+              <Text style={styles.collapsibleHeaderText}>About Spaces</Text>
+            </View>
+          </TouchableOpacity>
+          {isAboutSpacesExpanded && (
+            <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>What are Spaces?</Text>
               <Text style={styles.infoValue}>
@@ -1250,7 +1827,8 @@ export default function SpacesScreen() {
               <Text style={styles.infoLabel}>Features</Text>
               <Text style={styles.infoValue}>Create, manage, and organize your spaces</Text>
             </View>
-          </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -1310,6 +1888,20 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     marginBottom: 8,
   },
+  collapsibleHeader: {
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  collapsibleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  collapsibleHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1319,23 +1911,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginLeft: 8,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-  },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
     marginLeft: 8,
   },
   infoCard: {
@@ -1583,7 +2158,32 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 18,
   },
+  modalButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButtonRowSpacing: {
+    marginTop: 12,
+  },
+  modalCopyButton: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+  },
+  modalCopyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
   modalDismissButton: {
+    flex: 1,
     backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
@@ -1594,5 +2194,131 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.black,
+  },
+  modalSimulateButton: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+  },
+  modalSimulateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  modalBroadcastButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBroadcastButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.black,
+  },
+  tableContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: colors.cardDark,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDark,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  tableHeaderText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDark,
+    minHeight: 48,
+  },
+  tableRowLast: {
+    borderBottomWidth: 0,
+  },
+  tableCellSpace: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  tableCellSpaceText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.primary,
+  },
+  tableCellStatus: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  tableCellStatusText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  tableCellNextCheck: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  tableCellNextCheckText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'right',
+  },
+  deleteDialogText: {
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  modalDeleteButton: {
+    flex: 1,
+    backgroundColor: colors.error || '#ef4444',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDeleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white || '#ffffff',
   },
 });
