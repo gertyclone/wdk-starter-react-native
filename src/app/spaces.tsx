@@ -1,6 +1,6 @@
 import Header from '@/components/header';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Box, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Info } from 'lucide-react-native';
+import { Box, Check, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Info } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -39,6 +39,10 @@ interface SpaceAvailabilityResponse {
   '1_block_fee'?: number; // Block fee for ~10 mins in sats
   '6_block_fee'?: number; // Block fee for ~1 hour in sats
   '48_block_fee'?: number; // Block fee for ~8 hours in sats
+  sptr_price?: number; // SPTR price
+  '1_block_sptr_fee'?: number; // SPTR block fee for ~10 mins
+  '6_block_sptr_fee'?: number; // SPTR block fee for ~1 hour
+  '48_block_sptr_fee'?: number; // SPTR block fee for ~8 hours
   handle?: string;
   id?: number; // quote_id from API
   [key: string]: any;
@@ -69,6 +73,11 @@ export default function SpacesScreen() {
   const [blockFee1, setBlockFee1] = useState<number | null>(null);
   const [blockFee6, setBlockFee6] = useState<number | null>(null);
   const [blockFee48, setBlockFee48] = useState<number | null>(null);
+  const [sptrPrice, setSptrPrice] = useState<number | null>(null);
+  const [sptrFee1, setSptrFee1] = useState<number | null>(null);
+  const [sptrFee6, setSptrFee6] = useState<number | null>(null);
+  const [sptrFee48, setSptrFee48] = useState<number | null>(null);
+  const [takeOnchain, setTakeOnchain] = useState(false);
   const [spaceNameOptions, setSpaceNameOptions] = useState<string[]>(SPACE_NAME_OPTIONS);
   const [btcPriceUSD, setBtcPriceUSD] = useState<number | null>(null);
   const [quoteId, setQuoteId] = useState<number | null>(null);
@@ -844,7 +853,12 @@ export default function SpacesScreen() {
               blockFee6,
               blockFee48,
               selectedDuration,
-              btcPriceUSD
+              btcPriceUSD,
+              takeOnchain,
+              sptrPrice,
+              sptrFee1,
+              sptrFee6,
+              sptrFee48
             );
             setButtonLabel(totalLabel);
           }
@@ -945,12 +959,16 @@ export default function SpacesScreen() {
 
     try {
       const confTarget = getConfTarget(selectedDuration);
+      const sptrBlockFee = getSptrFee(selectedDuration, sptrFee1, sptrFee6, sptrFee48);
       const requestBody = {
         block_fee: blockFee,
         handle: handle,
         price: priceSats,
         quote_id: quoteId,
         conf_target: confTarget,
+        sptr: takeOnchain ? 'true' : 'false',
+        sptr_price: sptrPrice,
+        block_sptr_fee: sptrBlockFee,
       };
 
       console.log('[Spaces API] POST request body:', JSON.stringify(requestBody, null, 2));
@@ -1095,7 +1113,12 @@ export default function SpacesScreen() {
             blockFee6,
             blockFee48,
             selectedDuration,
-            btcPriceUSD
+            btcPriceUSD,
+            takeOnchain,
+            sptrPrice,
+            sptrFee1,
+            sptrFee6,
+            sptrFee48
           );
           setButtonLabel(totalLabel);
         }
@@ -1111,6 +1134,28 @@ export default function SpacesScreen() {
 
   // Get the appropriate block fee based on selected duration
   const getBlockFee = useCallback(
+    (
+      duration: string,
+      fee1: number | null,
+      fee6: number | null,
+      fee48: number | null
+    ): number | null => {
+      switch (duration) {
+        case '~10 mins':
+          return fee1;
+        case '~1 hour':
+          return fee6;
+        case '~8 hours':
+          return fee48;
+        default:
+          return fee1;
+      }
+    },
+    []
+  );
+
+  // Get the appropriate SPTR block fee based on selected duration
+  const getSptrFee = useCallback(
     (
       duration: string,
       fee1: number | null,
@@ -1153,7 +1198,12 @@ export default function SpacesScreen() {
       fee6: number | null,
       fee48: number | null,
       duration: string,
-      btcPrice: number | null
+      btcPrice: number | null,
+      takeOnchain: boolean,
+      sptrPrice: number | null,
+      sptrFee1: number | null,
+      sptrFee6: number | null,
+      sptrFee48: number | null
     ): string => {
       if (price === null) {
         return 'Purchase';
@@ -1164,7 +1214,15 @@ export default function SpacesScreen() {
         return 'Purchase';
       }
 
-      const totalPrice = price + blockFee;
+      let totalPrice = price + blockFee;
+      
+      // Add SPTR costs if takeOnchain is checked
+      if (takeOnchain && sptrPrice !== null) {
+        const sptrFee = getSptrFee(duration, sptrFee1, sptrFee6, sptrFee48);
+        if (sptrFee !== null) {
+          totalPrice += sptrPrice + sptrFee;
+        }
+      }
       // Format sats with commas for readability
       const formattedSats = totalPrice.toLocaleString();
 
@@ -1184,7 +1242,7 @@ export default function SpacesScreen() {
 
       return `Purchase for ${formattedSats} sats = $${formattedUSD}`;
     },
-    [getBlockFee]
+    [getBlockFee, getSptrFee]
   );
 
   // Initialize pricing service and fetch BTC price
@@ -1301,6 +1359,10 @@ export default function SpacesScreen() {
         setBlockFee1(null);
         setBlockFee6(null);
         setBlockFee48(null);
+        setSptrPrice(null);
+        setSptrFee1(null);
+        setSptrFee6(null);
+        setSptrFee48(null);
         return;
       }
 
@@ -1376,8 +1438,30 @@ export default function SpacesScreen() {
             setBlockFee1(fee1Value);
             setBlockFee6(fee6Value);
             setBlockFee48(fee48Value);
+
+            // Store SPTR price and fees (ensure they're numbers)
+            const sptrPriceValue =
+              data.sptr_price !== undefined && data.sptr_price !== null
+                ? Number(data.sptr_price)
+                : null;
+            const sptrFee1Value =
+              data['1_block_sptr_fee'] !== undefined && data['1_block_sptr_fee'] !== null
+                ? Number(data['1_block_sptr_fee'])
+                : null;
+            const sptrFee6Value =
+              data['6_block_sptr_fee'] !== undefined && data['6_block_sptr_fee'] !== null
+                ? Number(data['6_block_sptr_fee'])
+                : null;
+            const sptrFee48Value =
+              data['48_block_sptr_fee'] !== undefined && data['48_block_sptr_fee'] !== null
+                ? Number(data['48_block_sptr_fee'])
+                : null;
+            setSptrPrice(sptrPriceValue);
+            setSptrFee1(sptrFee1Value);
+            setSptrFee6(sptrFee6Value);
+            setSptrFee48(sptrFee48Value);
             console.log(
-              `[Spaces] API response: price=${data.price}, handle=${data.handle}, id=${data.id}, 1_block_fee=${fee1Value}, 6_block_fee=${fee6Value}, 48_block_fee=${fee48Value}`
+              `[Spaces] API response: price=${data.price}, handle=${data.handle}, id=${data.id}, 1_block_fee=${fee1Value}, 6_block_fee=${fee6Value}, 48_block_fee=${fee48Value}, sptr_price=${sptrPriceValue}, 1_block_sptr_fee=${sptrFee1Value}, 6_block_sptr_fee=${sptrFee6Value}, 48_block_sptr_fee=${sptrFee48Value}`
             );
             // Don't set button label here - let the recalculation useEffect handle it
           } else {
@@ -1385,6 +1469,10 @@ export default function SpacesScreen() {
             setBlockFee1(null);
             setBlockFee6(null);
             setBlockFee48(null);
+            setSptrPrice(null);
+            setSptrFee1(null);
+            setSptrFee6(null);
+            setSptrFee48(null);
             setHandle(null);
             setQuoteId(null);
             setButtonLabel('Purchase');
@@ -1397,6 +1485,10 @@ export default function SpacesScreen() {
           setBlockFee1(null);
           setBlockFee6(null);
           setBlockFee48(null);
+          setSptrPrice(null);
+          setSptrFee1(null);
+          setSptrFee6(null);
+          setSptrFee48(null);
           setIsConfirmationMode(false);
           setPurchaseData(null);
           setHandle(null);
@@ -1435,6 +1527,10 @@ export default function SpacesScreen() {
         setBlockFee1(null);
         setBlockFee6(null);
         setBlockFee48(null);
+        setSptrPrice(null);
+        setSptrFee1(null);
+        setSptrFee6(null);
+        setSptrFee48(null);
         setIsConfirmationMode(false);
         setPurchaseData(null);
         setHandle(null);
@@ -1545,7 +1641,12 @@ export default function SpacesScreen() {
           blockFee6,
           blockFee48,
           selectedDuration,
-          btcPriceUSD
+          btcPriceUSD,
+          takeOnchain,
+          sptrPrice,
+          sptrFee1,
+          sptrFee6,
+          sptrFee48
         );
         setButtonLabel(totalLabel);
       } else {
@@ -1560,6 +1661,11 @@ export default function SpacesScreen() {
     blockFee48,
     buttonState,
     btcPriceUSD,
+    takeOnchain,
+    sptrPrice,
+    sptrFee1,
+    sptrFee6,
+    sptrFee48,
     calculateTotalPrice,
     getBlockFee,
   ]);
@@ -1645,13 +1751,74 @@ export default function SpacesScreen() {
             {/* Confirmation message - Shown in confirmation mode */}
             {isConfirmationMode && purchaseData && (
               <View style={styles.confirmationMessage}>
-                <Text style={styles.confirmationText}>
-                  Send {purchaseData.total_price.toLocaleString()} sats to{' '}
-                  {shortenAddress(purchaseData.taproot_address)} before block{' '}
-                  {purchaseData.expiring_blockheight} to complete the purchase of{' '}
-                  {purchaseData.handle}.
-                </Text>
+                <View style={styles.purchaseOrderTable}>
+                  <View style={styles.purchaseOrderHeader}>
+                    <Text style={styles.purchaseOrderHeaderText}>Item</Text>
+                    <Text style={styles.purchaseOrderHeaderText}>Price</Text>
+                  </View>
+                  <View style={styles.purchaseOrderRow}>
+                    <Text style={styles.purchaseOrderItemText}>
+                      {subspace.trim()}@{spaceName.toLowerCase()}
+                    </Text>
+                    <Text style={styles.purchaseOrderPriceText}>
+                      {priceSats?.toLocaleString() || '0'} sats
+                    </Text>
+                  </View>
+                  <View style={styles.purchaseOrderRow}>
+                    <Text style={styles.purchaseOrderItemText}>transaction fee</Text>
+                    <Text style={styles.purchaseOrderPriceText}>
+                      {getBlockFee(selectedDuration, blockFee1, blockFee6, blockFee48)?.toLocaleString() || '0'} sats
+                    </Text>
+                  </View>
+                  {takeOnchain && sptrPrice !== null && (
+                    <>
+                      <View style={styles.purchaseOrderRow}>
+                        <Text style={styles.purchaseOrderItemText}>onchain</Text>
+                        <Text style={styles.purchaseOrderPriceText}>
+                          {sptrPrice.toLocaleString()} sats
+                        </Text>
+                      </View>
+                      <View style={styles.purchaseOrderRow}>
+                        <Text style={styles.purchaseOrderItemText}>onchain fee</Text>
+                        <Text style={styles.purchaseOrderPriceText}>
+                          {getSptrFee(selectedDuration, sptrFee1, sptrFee6, sptrFee48)?.toLocaleString() || '0'} sats
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                  <View style={[styles.purchaseOrderRow, styles.purchaseOrderTotalRow]}>
+                    <Text style={styles.purchaseOrderTotalText}>Total</Text>
+                    <Text style={styles.purchaseOrderTotalPriceText}>
+                      {(() => {
+                        let total = purchaseData.total_price;
+                        if (takeOnchain && sptrPrice !== null) {
+                          const sptrFee = getSptrFee(selectedDuration, sptrFee1, sptrFee6, sptrFee48);
+                          if (sptrFee !== null) {
+                            total += sptrPrice + sptrFee;
+                          }
+                        }
+                        return total.toLocaleString();
+                      })()} sats
+                    </Text>
+                  </View>
+                </View>
               </View>
+            )}
+
+            {/* Take Onchain Checkbox */}
+            {!isConfirmationMode && (
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setTakeOnchain(!takeOnchain)}
+                activeOpacity={0.7}>
+                <View style={[styles.checkbox, takeOnchain && styles.checkboxChecked]}>
+                  {takeOnchain && <Check size={16} color={colors.black} />}
+                </View>
+                <Text style={styles.checkboxLabel}>
+                  Take onchain for {sptrPrice?.toLocaleString() || '0'} +{' '}
+                  {getSptrFee(selectedDuration, sptrFee1, sptrFee6, sptrFee48)?.toLocaleString() || '0'} sats
+                </Text>
+              </TouchableOpacity>
             )}
 
             <TouchableOpacity
@@ -2083,6 +2250,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: colors.borderDark,
+    borderRadius: 4,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: colors.text,
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -2130,6 +2323,56 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  purchaseOrderTable: {
+    width: '100%',
+  },
+  purchaseOrderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDark,
+  },
+  purchaseOrderHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    textTransform: 'uppercase',
+  },
+  purchaseOrderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  purchaseOrderItemText: {
+    fontSize: 14,
+    color: colors.text,
+    flex: 1,
+  },
+  purchaseOrderPriceText: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  purchaseOrderTotalRow: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderDark,
+  },
+  purchaseOrderTotalText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  purchaseOrderTotalPriceText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'right',
   },
   modalContent: {
     backgroundColor: colors.card,

@@ -153,7 +153,13 @@ export default function SubspaceScreen() {
         <TouchableOpacity
           style={styles.hexToolButton}
           onPress={() => {
-            // TODO: Implement Hex Tool functionality
+            router.push({
+              pathname: '/hex-tool',
+              params: {
+                subspace: subspace,
+                spaceName: spaceName,
+              },
+            });
           }}
           activeOpacity={0.7}
         >
