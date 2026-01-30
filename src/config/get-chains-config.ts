@@ -1,5 +1,5 @@
 const getChainsConfig = () => {
-  return {
+  const chainsConfig: Record<string, any> = {
     ethereum: {
       chainId: 1,
       blockchain: 'ethereum',
@@ -49,6 +49,7 @@ const getChainsConfig = () => {
       safeModulesVersion: '0.3.0',
     },
     ton: {
+      blockchain: 'ton',
       tonApiClient: {
         url: 'https://tonapi.io',
       },
@@ -65,16 +66,41 @@ const getChainsConfig = () => {
     //   port: 50001,
     // },
     bitcoin: {
-      network: 'bitcoin',
-      host: '192.168.1.110',
-      port: 50001,
+      blockchain: 'bitcoin',
+      // Delete the wallet when switching to testnet or back to mainnet.
+      network: process.env.EXPO_PUBLIC_BITCOIN_NETWORK, // BITCOIN_NETWORK
+      host: process.env.EXPO_PUBLIC_ELECTRS_HOST, // ELECTRS_HOST
+      port: process.env.EXPO_PUBLIC_ELECTRS_PORT
+        ? Number(process.env.EXPO_PUBLIC_ELECTRS_PORT)
+        : undefined, // ELECTRS_PORT (converted to number)
+      protocol: process.env.EXPO_PUBLIC_ELECTRS_PROTOCOL as 'tcp' | 'tls' | 'ssl' | undefined, // ELECTRS_PROTOCOL (defaults to 'tcp' in wallet-btc)
+
       // For P2TR (Taproot) addresses (bc1p...), use BIP-86
       // For P2WPKH (Native SegWit) addresses (bc1q...), use BIP-84
       // Currently configured for P2TR wallet: bc1pcp2p7nzg8kknr42w6yel8k7hpy5tedjpacnwlvtfhzgmaq6u4qnq06nhac
+      // Derivation path format: m/{bip}'/{network}'/{account}'/{change}/{index}
+      // - For testnet (network='testnet'): m/86'/1'/0'/0/0 (first address)
+      // - For mainnet (network='bitcoin'): m/86'/0'/0'/0/0 (first address)
       bip: 86, // Use BIP86 for Taproot (m/86') addresses
       script_type: 'P2TR', // Use P2TR for Taproot addresses
       // bip: 84, // Use BIP84 for native SegWit (m/84') addresses
       // script_type: 'P2WPKH', // Use P2WPKH for native SegWit addresses
+    },
+    // SOLANA and LIGHTNING are disabled - keeping minimal configs to prevent WDKService errors
+    solana: {
+      blockchain: 'solana',
+      // DISABLED - Solana support not yet implemented
+      // Minimal config required by WDKService to avoid "Cannot read property 'blockchain' of undefined" error
+    },
+    lightning: {
+      blockchain: 'lightning',
+      // DISABLED - Lightning support not yet implemented
+      // Minimal config required by WDKService to avoid "Cannot read property 'blockchain' of undefined" error
+    },
+    tron: {
+      blockchain: 'tron',
+      // DISABLED - Tron support not yet implemented
+      // Minimal config required by WDKService to avoid "Cannot read property 'blockchain' of undefined" error
     },
     // tron: {
     //   chainId: 3448148188,
@@ -92,6 +118,7 @@ const getChainsConfig = () => {
     //   },
     // },
   };
+  return chainsConfig;
 };
 
 export default getChainsConfig;

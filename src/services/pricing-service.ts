@@ -39,6 +39,7 @@ class PricingService {
           [AssetTicker.BTC]: await this.provider.getLastPrice(AssetTicker.BTC, FiatCurrency.USD),
           [AssetTicker.USDT]: 1,
           [AssetTicker.XAUT]: await this.provider.getLastPrice(AssetTicker.XAUT, FiatCurrency.USD),
+          [AssetTicker.USAT]: 1,
         },
       };
 
@@ -68,6 +69,7 @@ class PricingService {
           [AssetTicker.BTC]: await this.provider.getLastPrice(AssetTicker.BTC, FiatCurrency.USD),
           [AssetTicker.USDT]: 1,
           [AssetTicker.XAUT]: await this.provider.getLastPrice(AssetTicker.XAUT, FiatCurrency.USD),
+          [AssetTicker.USAT]: 1,
         },
       };
 

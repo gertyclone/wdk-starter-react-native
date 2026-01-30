@@ -34,6 +34,7 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 - **BTC**: Native Bitcoin on SegWit and Lightning networks
 - **USD₮ (Tether USD)**: Multi-chain USD₮ support (Ethereum, Polygon, Arbitrum, TON, Tron, Solana)
 - **XAU₮ (Tether Gold)**: Gold-backed stablecoin on Ethereum
+- **USA₮ (Tether USAT)**: USAT-backed stablecoin on Ethereum
 
 ### Wallet Management
 - **Secure Seed Generation**: Cryptographically secure 12-word mnemonic generation
@@ -255,6 +256,7 @@ This starter supports the following blockchain networks and operations:
 | **Bitcoin** | BTC | Bitcoin (SegWit), Lightning |
 | **Tether USD** | USD₮ | Ethereum, Polygon, Arbitrum, TON, Tron, Solana |
 | **Tether Gold** | XAU₮ | Ethereum |
+| **Tether USAT** | USA₮ | Ethereum |
 
 ### Key Features
 - **Gas Sponsorship**: EVM networks (Ethereum, Polygon, Arbitrum) and other supported chains offer gasless transactions via paymasters

@@ -4,6 +4,13 @@ const { configureMetroForWDK } = require('@tetherto/wdk-react-native-provider/me
 
 const config = getDefaultConfig(__dirname);
 
+// Add watchFolders to watch the local wdk-wallet-btc package directory
+// This is required for Metro to properly watch files outside the project root
+config.watchFolders = [
+  ...(config.watchFolders || []),
+  path.resolve(__dirname, '../wdk-wallet-btc'),
+];
+
 const { transformer, resolver } = config;
 
 config.transformer = {
@@ -24,6 +31,13 @@ config.resolver = {
 
 // Apply WDK polyfills configuration first (handles Node.js core module polyfills)
 const wdkConfig = configureMetroForWDK(config);
+
+// Ensure watchFolders is preserved after WDK config
+// This is critical for Metro to watch the local wdk-wallet-btc package
+wdkConfig.watchFolders = [
+  ...(wdkConfig.watchFolders || []),
+  ...(config.watchFolders || []),
+];
 
 // Override node_modules resolution AFTER WDK config to use local wdk-wallet-btc package
 // This ensures our override isn't overwritten by WDK's config

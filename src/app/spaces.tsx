@@ -27,10 +27,9 @@ import getChainsConfig from '@/config/get-chains-config';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from 'sonner-native';
 
-const SPACE_NAME_OPTIONS = ['usdt', 'xaut', 'pubkey'];
+const SPACE_NAME_OPTIONS = ['spacesops_services', 'are_currently_unavailable', 'try_again_later'];
 const DURATION_OPTIONS = ['~10 mins', '~1 hour', '~8 hours'];
-const SPACES_API_BASE_URL = 'http://192.168.1.111:7264';
-// const SPACES_API_BASE_URL = 'http://70.251.209.207:7264';
+const SPACES_API_BASE_URL = process.env.EXPO_PUBLIC_SPACES_API_BASE_URL || 'http://192.168.1.111:7264';
 const SPACES_APP_NAME = 'spaces-wallet';
 
 interface SpaceAvailabilityResponse {
@@ -100,20 +99,33 @@ export default function SpacesScreen() {
     asset: AssetTicker;
     memo?: string;
   } | null>(null);
+  type UnifiedStatus =
+    | 'pending_payment'
+    | 'processing'
+    | 'confirmed'
+    | 'proof_created'
+    | 'proof_batched'
+    | 'proof_committed'
+    | 'certificate_pending'
+    | 'certificate_delivered'
+    | 'sptr_creating'
+    | 'sptr_created'
+    | 'sptr_delivered'
+    | 'expired'
+    | 'cancelled'
+    | 'purchasing'; // Legacy status for backward compatibility
+
   const [mySpaces, setMySpaces] = useState<
     {
       subspace: string;
       spaceName: string;
       handle: string;
-      status:
-        | 'purchasing'
-        | 'purchased'
-        | 'pending'
-        | 'processing'
-        | 'confirmed'
-        | 'expired'
-        | 'cancelled';
-      jobId?: number;
+      status: UnifiedStatus;
+      jobId?: number; // Primary job ID (subname)
+      sptrJobId?: number; // SPTR job ID (if applicable)
+      purchaseId?: number; // Subname purchase ID
+      sptrPurchaseId?: number; // SPTR purchase ID
+      hasSptr?: boolean; // Whether this purchase includes SPTR
     }[]
   >([]);
   const [jobPollingState, setJobPollingState] = useState<
@@ -158,14 +170,21 @@ export default function SpacesScreen() {
     const space = mySpaces.find((s) => s.subspace === subspace && s.spaceName === spaceName);
     if (!space) return 'Unknown';
 
-    const statusMap: Record<string, string> = {
-      purchasing: 'Purchasing',
-      pending: 'Pending',
-      processing: 'Processing',
-      confirmed: 'Confirmed',
+    const statusMap: Record<UnifiedStatus, string> = {
+      pending_payment: 'Awaiting Payment',
+      processing: 'Confirming Payment',
+      confirmed: 'Payment Confirmed',
+      proof_created: 'Proof Created',
+      proof_batched: 'Waiting for Batch',
+      proof_committed: 'Proof Committed',
+      certificate_pending: 'Preparing Certificate',
+      certificate_delivered: 'Certificate Ready',
+      sptr_creating: 'Creating SPTR',
+      sptr_created: 'SPTR Created',
+      sptr_delivered: 'Complete',
       expired: 'Expired',
       cancelled: 'Cancelled',
-      purchased: 'Purchased',
+      purchasing: 'Purchasing', // Legacy status
     };
 
     return statusMap[space.status] || 'Unknown';
@@ -228,15 +247,18 @@ export default function SpacesScreen() {
       }));
     };
 
-    const updateSpaceStatus = (status: string) => {
+    const updateSpaceStatus = (status: UnifiedStatus) => {
       setMySpaces((prev) =>
         prev.map((space) =>
           space.subspace === subspace && space.spaceName === spaceName.toLowerCase()
-            ? { ...space, status: status as any, jobId }
+            ? { ...space, status: status, jobId }
             : space
         )
       );
     };
+
+    // Try to use unified status endpoint if we have spaceName and subspace
+    const unifiedStatusUrl = `${SPACES_API_BASE_URL}/api/purchases/${spaceName}/${subspace}/status`;
 
     while (attempt < maxAttempts) {
       try {
@@ -247,53 +269,80 @@ export default function SpacesScreen() {
           `[Spaces] Polling job ${jobId} - attempt ${attempt + 1}${attempt > 0 ? `, next check in ${delay}ms` : ' (immediate)'}`
         );
 
-        const response = await fetch(url);
-        const data = await response.json();
+        // Try unified status endpoint first, fallback to job status endpoint
+        let response;
+        let data;
+        let unifiedStatus: UnifiedStatus | null = null;
+
+        try {
+          response = await fetch(unifiedStatusUrl);
+          data = await response.json();
+          if (data.success && data.unified_status) {
+            unifiedStatus = data.unified_status as UnifiedStatus;
+            console.log(`[Spaces] Got unified status: ${unifiedStatus} for ${subspace}@${spaceName}`);
+          }
+        } catch (unifiedError) {
+          console.warn(`[Spaces] Unified status endpoint failed, falling back to job status:`, unifiedError);
+          // Fallback to job status endpoint
+          response = await fetch(url);
+          data = await response.json();
+        }
 
         if (!data.success) {
           throw new Error(data.message || 'Failed to fetch job status');
         }
 
-        const job = data.job;
-
-        // Map job status to space status
-        const statusMap: Record<string, string> = {
-          pending_payment: 'pending',
-          processing: 'processing',
-          confirmed: 'confirmed',
-          expired: 'expired',
-          cancelled: 'cancelled',
-        };
-
-        const mappedStatus = statusMap[job.status] || 'purchasing';
-        updateSpaceStatus(mappedStatus);
+        // Use unified status if available, otherwise map from job status
+        if (unifiedStatus) {
+          updateSpaceStatus(unifiedStatus);
+        } else {
+          const job = data.job;
+          // Map job status to unified status
+          const statusMap: Record<string, UnifiedStatus> = {
+            pending_payment: 'pending_payment',
+            processing: 'processing',
+            confirmed: 'confirmed',
+            expired: 'expired',
+            cancelled: 'cancelled',
+          };
+          const mappedStatus = statusMap[job.status] || 'pending_payment';
+          updateSpaceStatus(mappedStatus);
+        }
 
         // Check for terminal states
-        const terminalStates = ['confirmed', 'expired', 'cancelled'];
-        if (terminalStates.includes(job.status)) {
+        const terminalStates: UnifiedStatus[] = ['certificate_delivered', 'sptr_delivered', 'expired', 'cancelled'];
+        const currentStatus = unifiedStatus || (data.purchase?.unified_status as UnifiedStatus) || 'pending_payment';
+        
+        if (terminalStates.includes(currentStatus)) {
           updatePollingState(nextCheckTime, false);
-          console.log(`[Spaces] Job ${jobId} completed with status: ${job.status}`);
-          if (job.status === 'confirmed') {
-            toast.success(`Purchase confirmed for ${subspace}@${spaceName}`);
-          } else if (job.status === 'expired') {
+          console.log(`[Spaces] Job ${jobId} completed with status: ${currentStatus}`);
+          if (currentStatus === 'certificate_delivered' || currentStatus === 'sptr_delivered') {
+            toast.success(`Purchase complete for ${subspace}@${spaceName}`);
+          } else if (currentStatus === 'expired') {
             toast.error(`Purchase expired for ${subspace}@${spaceName}`);
-          } else if (job.status === 'cancelled') {
+          } else if (currentStatus === 'cancelled') {
             toast.info(`Purchase cancelled for ${subspace}@${spaceName}`);
           }
           return data;
         }
 
         // Check expiration
-        if (job.is_expired) {
+        const job = data.job;
+        if (job && job.is_expired) {
           updateSpaceStatus('expired');
           updatePollingState(nextCheckTime, false);
           toast.error(`Purchase expired for ${subspace}@${spaceName}`);
           return { ...data, expired: true };
         }
 
-        console.log(`[Spaces] Job ${jobId}: ${job.status} (attempt ${attempt + 1})`);
-        if (job.blocks_until_expiration !== null) {
-          console.log(`  Blocks until expiration: ${job.blocks_until_expiration}`);
+        if (job) {
+          console.log(`[Spaces] Job ${jobId}: ${job.status} (attempt ${attempt + 1})`);
+          if (job.blocks_until_expiration !== null) {
+            console.log(`  Blocks until expiration: ${job.blocks_until_expiration}`);
+          }
+        }
+        if (unifiedStatus) {
+          console.log(`[Spaces] Unified status: ${unifiedStatus} (attempt ${attempt + 1})`);
         }
 
         // Exponential backoff: double delay, up to maxDelay
@@ -824,6 +873,23 @@ export default function SpacesScreen() {
           );
         }
 
+        // Update space entry with job IDs and purchase IDs
+        setMySpaces((prev) =>
+          prev.map((space) =>
+            space.subspace === subspace.trim() && space.spaceName === spaceNameLower
+              ? {
+                  ...space,
+                  jobId: data.job_id,
+                  purchaseId: data.purchase_id,
+                  sptrJobId: data.sptr_job_id || undefined,
+                  sptrPurchaseId: data.sptr_purchase_id || undefined,
+                  hasSptr: !!data.sptr_job_id,
+                  status: 'pending_payment' as UnifiedStatus,
+                }
+              : space
+          )
+        );
+
         // Store job_id and handle in local storage
         if (data.job_id && data.handle) {
           const storageKey = `spaces_purchase_${data.job_id}`;
@@ -831,6 +897,10 @@ export default function SpacesScreen() {
             job_id: data.job_id,
             handle: data.handle,
             quote_id: data.quote_id,
+            purchase_id: data.purchase_id,
+            sptr_job_id: data.sptr_job_id,
+            sptr_purchase_id: data.sptr_purchase_id,
+            has_sptr: !!data.sptr_job_id,
             timestamp: Date.now(),
           };
           await AsyncStorage.setItem(storageKey, JSON.stringify(storageData));
@@ -1315,7 +1385,10 @@ export default function SpacesScreen() {
           console.error(
             `[Spaces API] GET ${url} - HTTP error! status: ${response.status} (${duration}ms)`
           );
-          throw new Error(`HTTP error! status: ${response.status}`);
+          if (response.status >= 500) {
+            toast.error('Spaces server is temporarily unavailable. Please try again later.');
+          }
+          return;
         }
 
         const data: GetSpacesResponse = await response.json();
@@ -1340,6 +1413,7 @@ export default function SpacesScreen() {
         } else {
           console.error(`[Spaces API] GET ${url} - Failed (${duration}ms):`, error);
         }
+        toast.error('Unable to reach Spaces server. Please try again later.');
         // Keep default options on error
       }
     };
@@ -1572,9 +1646,10 @@ export default function SpacesScreen() {
         setMySpaces(loadedSpaces);
 
         // Resume polling for active jobs
+        const terminalStates: UnifiedStatus[] = ['certificate_delivered', 'sptr_delivered', 'expired', 'cancelled'];
         const activeSpaces = loadedSpaces.filter(
-          (space: { jobId?: number; status: string }) =>
-            space.jobId && !['confirmed', 'expired', 'cancelled'].includes(space.status)
+          (space: { jobId?: number; status: UnifiedStatus }) =>
+            space.jobId && !terminalStates.includes(space.status)
         );
 
         if (activeSpaces.length > 0) {

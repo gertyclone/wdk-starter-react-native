@@ -50,4 +50,11 @@ export const assetConfig: Record<string, AssetConfig> = {
     color: '#ffffff',
     supportedNetworks: [NetworkType.ETHEREUM],
   },
+  usat: {
+    name: 'USA₮',
+    symbol: 'USA₮',
+    icon: require('../../assets/images/tokens/tether-usat-logo.png'),
+    color: '#ffffff',
+    supportedNetworks: [NetworkType.ETHEREUM],
+  },
 };

@@ -1,4 +1,9 @@
-import { AssetTicker, useWallet, WDKService } from '@tetherto/wdk-react-native-provider';
+import {
+  AssetTicker,
+  NetworkType,
+  useWallet,
+  WDKService,
+} from '@tetherto/wdk-react-native-provider';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -13,6 +18,7 @@ import {
   calculateGasFee,
   type GasFeeEstimate,
 } from '@/utils/gas-fee-calculator';
+import getChainsConfig from '@/config/get-chains-config';
 import {
   Alert,
   Keyboard,
@@ -348,13 +354,48 @@ export default function SendDetailsScreen() {
         numericAmount = numericAmount / tokenPrice;
       }
 
-      const sendResult = await WDKService.sendByNetwork(
-        networkType,
-        0, // account index
-        numericAmount,
-        recipientAddress,
-        assetTicker
-      );
+      // Check if Bitcoin script_type is P2TR, and use memo method if so
+      let sendResult;
+      if (assetTicker === AssetTicker.BTC && networkType === NetworkType.SEGWIT) {
+        const chainsConfig = getChainsConfig();
+        const bitcoinConfig = chainsConfig.bitcoin;
+        const scriptType = bitcoinConfig?.script_type;
+
+        if (scriptType === 'P2TR') {
+          const memoHex = process.env.EXPO_PUBLIC_BITCOIN_P2TR_MEMO;
+          if (!memoHex) {
+            throw new Error(
+              'EXPO_PUBLIC_BITCOIN_P2TR_MEMO environment variable is required for P2TR transactions'
+            );
+          }
+          // Pass hex string directly as memo (environment variable is already a string)
+          const memo = memoHex;
+          sendResult = await WDKService.sendByNetworkWithMemo(
+            networkType,
+            0, // account index
+            numericAmount,
+            recipientAddress,
+            assetTicker,
+            memo
+          );
+        } else {
+          sendResult = await WDKService.sendByNetwork(
+            networkType,
+            0, // account index
+            numericAmount,
+            recipientAddress,
+            assetTicker
+          );
+        }
+      } else {
+        sendResult = await WDKService.sendByNetwork(
+          networkType,
+          0, // account index
+          numericAmount,
+          recipientAddress,
+          assetTicker
+        );
+      }
 
       setTransactionResult({ txId: sendResult });
       setShowConfirmation(true);

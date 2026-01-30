@@ -1,3 +1,5 @@
+nvm use v22.21.1
+
 https://docs.wallet.tether.io/start-building/react-native-quickstart
 # #9B2A6B
 # #B45F90
@@ -91,9 +93,54 @@ If you have npm start or expo start --dev-client running, it should show console
 Method 4: Chrome DevTools (for debugging)
 Shake the device or run:
    adb shell input keyevent 82
+
+Ways to view worklet logs (wallet-account-read-only-btc):
+Worklet logs run in a separate JavaScript context and don't automatically appear in the main thread.
+Method 1: Use adb logcat with broader filters (RECOMMENDED)
+Run:
+adb logcat | grep -iE '(wallet-account|worklet|wdk-wallet-btc|WORKLET)'
+Or view all logs:
+adb logcat ReactNativeJS:V ReactNative:V chromium:V console:V *:S
+Method 2: Use the worklet-specific script
+Run:
+./scripts/watch-worklet-logs.sh
+This filters specifically for worklet-related logs.
+Method 3: View all console output
+Run:
+adb logcat | grep -i console
+This shows all console.log/error/warn messages including worklet logs.
+Note: Worklet logs are prefixed with [WORKLET], [WORKLET ERROR], or [WORKLET WARN] to help identify them.
 Select "Debug" → "Open Chrome DevTools"
 Open Chrome DevTools to see console logs
 Method 5: More detailed filtering
 For comprehensive logs including your app's console output:
 adb logcat | grep -E '(ReactNativeJS|console|wdk|worklet|bare)'
 The script (./scripts/watch-android-logs.sh) is ready to use. It filters for React Native JS logs and shows them in real time.
+
+// Completely clean and rebuild from scratch
+nvm use v22.21.1
+rm -rf node_modules
+rm -f package-lock.json 
+npm install --ignore-scripts
+rm -rf android && rm -rf ios
+npm run prebuild:clean
+npm run postinstall
+npm run android
+
+The current Bitcoin wallet configuration is set to testnet and the account address is tb1p6lnnwcht84s3nczmc96q2usukcyucrvjpxlekhqj6eu36at46cusdplcgq .
+
+I can confirm that there is a UTXO at that address using an external block explorer, but the wdk-wallet-btc module doesn't seem to be calculating the available UTXOs properly in testnet mode when calculating balances.  
+
+Check the logic and recommend fixes.  Note that with network: 'bitcoin' it functions properly, just not with network: 'testnet'
+
+rm node_modules/@tetherto/wdk-react-native-provider/lib/module/services/wdk-service/wdk-worklet.mobile.bundle.js
+
+   adb logcat | grep -iE '(WORKLET|wallet-account)'
+
+// Environment Variables (EXPO_PUBLIC_*)
+// Important: With Expo dev clients (native apps), environment variables are embedded at BUILD TIME.
+// After adding new EXPO_PUBLIC_* variables to .env:
+// 1. Stop the dev server/app
+// 2. Rebuild the native app: npm run android (or npm run ios)
+// 3. The new variables will now be available
+// Note: You CANNOT just restart the dev server - you must rebuild the native app.

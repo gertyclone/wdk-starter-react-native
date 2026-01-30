@@ -1,4 +1,5 @@
 import { AssetTicker, NetworkType, WDKService } from '@tetherto/wdk-react-native-provider';
+import getChainsConfig from '@/config/get-chains-config';
 
 export interface GasFeeEstimate {
   fee?: number;
@@ -30,6 +31,11 @@ const QUOTE_RECIPIENTS = {
       [NetworkType.TON]: 'EQD5mxRgCuRNLxKxeOjG6r14iSroLF5FtomPnet-sgP5xNJb',
     },
   },
+  [AssetTicker.USAT]: {
+    networks: {
+      [NetworkType.ETHEREUM]: '0x8d42eb95360bf68d65e5a810986b2ebd88c5e606',
+    },
+  },
 };
 
 // Network type mapping
@@ -53,6 +59,7 @@ export const getAssetTicker = (tokenId: string): AssetTicker => {
     btc: AssetTicker.BTC,
     usdt: AssetTicker.USDT,
     xaut: AssetTicker.XAUT,
+    usat: AssetTicker.USAT,
   };
   return assetMap[tokenId?.toLowerCase()] || AssetTicker.USDT;
 };
@@ -79,13 +86,58 @@ export const calculateGasFee = async (
       };
     }
 
-    const gasFee = await WDKService.quoteSendByNetwork(
-      networkType,
-      0, // account index
-      assetTicker === AssetTicker.BTC ? parseFloat(amount!.toFixed(8)) : 1,
-      quoteRecipient,
-      assetTicker
-    );
+    // For Bitcoin, WDKService.quoteSendByNetwork expects amount in BTC and will multiply by 100000000
+    // to convert to satoshis internally. The amount parameter should be in BTC (e.g., 0.0003), not satoshis.
+    // If the amount is already in satoshis (e.g., 30000), we need to divide by 100000000 to convert to BTC.
+    // We check if the amount is > 1 (likely satoshis) and divide if needed, otherwise assume it's already in BTC.
+    let btcAmount = assetTicker === AssetTicker.BTC ? parseFloat(amount!.toFixed(8)) : 1;
+    if (assetTicker === AssetTicker.BTC && amount! > 1) {
+      // Amount appears to be in satoshis, convert to BTC
+      btcAmount = amount! / 100000000;
+    }
+
+    // Check if Bitcoin script_type is P2TR, and use memo method if so
+    let gasFee: number;
+    if (assetTicker === AssetTicker.BTC && networkType === NetworkType.SEGWIT) {
+      const chainsConfig = getChainsConfig();
+      const bitcoinConfig = chainsConfig.bitcoin;
+      const scriptType = bitcoinConfig?.script_type;
+
+      if (scriptType === 'P2TR') {
+        const memoHex = process.env.EXPO_PUBLIC_BITCOIN_P2TR_MEMO;
+        if (!memoHex) {
+          throw new Error(
+            'EXPO_PUBLIC_BITCOIN_P2TR_MEMO environment variable is required for P2TR transactions'
+          );
+        }
+        // Pass hex string directly as memo (environment variable is already a string)
+        const memo = memoHex;
+        gasFee = await WDKService.quoteSendByNetworkWithMemo(
+          networkType,
+          0, // account index
+          btcAmount,
+          quoteRecipient,
+          assetTicker,
+          memo
+        );
+      } else {
+        gasFee = await WDKService.quoteSendByNetwork(
+          networkType,
+          0, // account index
+          btcAmount,
+          quoteRecipient,
+          assetTicker
+        );
+      }
+    } else {
+      gasFee = await WDKService.quoteSendByNetwork(
+        networkType,
+        0, // account index
+        btcAmount,
+        quoteRecipient,
+        assetTicker
+      );
+    }
 
     return { fee: gasFee };
   } catch (error) {

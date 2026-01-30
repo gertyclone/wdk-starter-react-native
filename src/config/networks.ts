@@ -9,7 +9,7 @@ export interface Network {
   color: string;
 }
 
-export const networkConfigs: Record<NetworkType, Network> = {
+export const networkConfigs: Partial<Record<NetworkType, Network>> = {
   [NetworkType.ETHEREUM]: {
     id: 'ethereum',
     name: 'Ethereum',
@@ -42,14 +42,15 @@ export const networkConfigs: Record<NetworkType, Network> = {
     icon: require('../../assets/images/chains/ton-logo.png'),
     color: '#0088CC',
   },
-  // [NetworkType.TRON]: {
-  //   id: 'tron',
-  //   name: 'Tron',
-  //   gasLevel: 'Low',
-  //   gasColor: '#34C759',
-  //   icon: require('../../assets/images/chains/tron-trx-logo.png'),
-  //   color: '#FF060A',
-  // },
+  [NetworkType.TRON]: {
+    id: 'tron',
+    name: 'Tron',
+    gasLevel: 'Low',
+    gasColor: '#34C759',
+    icon: require('../../assets/images/chains/tron-trx-logo.png'),
+    color: '#FF060A',
+  },
+  // SOLANA and LIGHTNING are disabled in UI but must exist in networkConfigs for WDKService mapping
   [NetworkType.SOLANA]: {
     id: 'solana',
     name: 'Solana',
