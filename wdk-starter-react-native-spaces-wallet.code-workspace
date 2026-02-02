@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../wdk-wallet-btc"
+		},
+		{
+			"path": "../spacesops"
+		},
+		{
+			"path": "../wdk-react-native-provider"
 		}
 	],
 	"settings": {}

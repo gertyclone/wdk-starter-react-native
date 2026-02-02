@@ -2,22 +2,14 @@ import { BalanceLoader } from '@/components/BalanceLoader';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Box,
-  Palette,
-  QrCode,
-  Settings,
-  Shield,
-  Star,
-} from 'lucide-react-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDownLeft, ArrowUpRight, Box, QrCode, Settings } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Image,
-  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -26,13 +18,23 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LineChart } from 'react-native-chart-kit';
 import { AssetConfig, assetConfig } from '../config/assets';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
+import {
+  buildPriceChartData,
+  loadHistoricalPrices,
+  onHistoricalPricesUpdated,
+  type PriceChartData,
+} from '@/services/historical-price-storage';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
+
+const chartWidth = Dimensions.get('window').width - 40;
+const chartHeight = 220;
 
 type AggregatedBalance = ({
   denomination: string;
@@ -70,6 +72,7 @@ export default function WalletScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [chartData, setChartData] = useState<PriceChartData | null>(null);
   const [mounted, setMounted] = useState(false);
   const avatar = useWalletAvatar();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -101,7 +104,9 @@ export default function WalletScreen() {
       const config = assetConfig[denomination];
       if (!config) return null;
 
-      // Calculate fiat value using pricing service
+      if (!pricingService.isReady()) {
+        await pricingService.initialize().catch(() => {});
+      }
       const fiatValue = await pricingService.getFiatValue(
         totalBalance,
         denomination as AssetTicker,
@@ -134,30 +139,6 @@ export default function WalletScreen() {
     extrapolate: 'clamp',
   });
 
-  const suggestions = [
-    {
-      id: 1,
-      icon: Star,
-      title: 'Star repo on GitHub',
-      color: colors.primary,
-      url: 'https://github.com/spacesops/wdk-starter-react-native',
-    },
-    {
-      id: 2,
-      icon: Shield,
-      title: 'Explore the WDK docs',
-      color: colors.primary,
-      url: 'https://docs.wallet.tether.io/',
-    },
-    {
-      id: 3,
-      icon: Palette,
-      title: 'Explore the WDK UI Kit',
-      color: colors.primary,
-      url: 'https://github.com/tetherto/wdk-uikit-react-native',
-    },
-  ];
-
   // Get real transactions from wallet data
   const getTransactions = async () => {
     if (!walletTransactions) return [];
@@ -167,6 +148,9 @@ export default function WalletScreen() {
       ? Object.values(addresses).map(addr => addr?.toLowerCase())
       : [];
 
+    if (!pricingService.isReady()) {
+      await pricingService.initialize().catch(() => {});
+    }
     const result = await Promise.all(
       walletTransactions.list
         .sort((a, b) => b.timestamp - a.timestamp)
@@ -177,7 +161,6 @@ export default function WalletScreen() {
           const amount = parseFloat(tx.amount);
           const config = assetConfig[tx.token];
 
-          // Calculate fiat amount using pricing service
           const fiatAmount = await pricingService.getFiatValue(
             amount,
             tx.token as AssetTicker,
@@ -241,6 +224,7 @@ export default function WalletScreen() {
     setRefreshing(true);
     try {
       await refreshWalletBalance();
+      await loadChartData();
     } catch (error) {
       console.error('Failed to refresh wallet data:', error);
     } finally {
@@ -257,6 +241,38 @@ export default function WalletScreen() {
     getTransactions().then(setTransactions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletTransactions?.list, addresses]);
+
+  const loadChartData = useCallback(async () => {
+    try {
+      const stored = await loadHistoricalPrices();
+      console.log('[loadChartData] stored keys:', Object.keys(stored), 'btc points:', stored.btc?.data?.length ?? 0, 'xaut points:', stored.xaut?.data?.length ?? 0);
+      setChartData(buildPriceChartData(stored) ?? null);
+    } catch {
+      setChartData(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadChartData();
+  }, [loadChartData, balances?.list, walletTransactions?.list]);
+
+  // Reload chart when historical price sync completes (so we don't stay on "No price history yet")
+  useEffect(() => {
+    const unsubscribe = onHistoricalPricesUpdated(loadChartData);
+    return unsubscribe;
+  }, [loadChartData]);
+
+  // Delayed reload so we pick up chart data if sync completes shortly after mount
+  useEffect(() => {
+    const t = setTimeout(loadChartData, 1500);
+    return () => clearTimeout(t);
+  }, [loadChartData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadChartData();
+    }, [loadChartData])
+  );
 
   // Force component to fully mount before enabling RefreshControl on iOS
   useEffect(() => {
@@ -406,26 +422,63 @@ export default function WalletScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Suggestions */}
-        <View style={styles.suggestionsSection}>
-          <View style={styles.suggestionsHeader}>
-            <Text style={styles.sectionTitle}>Suggestions</Text>
+        {/* BTC & XAUT price line chart (last year) */}
+        <View style={styles.chartSection}>
+          <View style={styles.chartHeader}>
+            <Text style={styles.sectionTitle}>BTC & XAUT (USD)</Text>
           </View>
-
-          <View style={styles.suggestionsGrid}>
-            {suggestions.map(suggestion => (
-              <TouchableOpacity
-                onPress={() => {
-                  Linking.openURL(suggestion.url);
+          {chartData && chartData.datasets.length > 0 ? (
+            <>
+              <LineChart
+                data={chartData}
+                width={chartWidth}
+                height={chartHeight}
+                yAxisLabel="$"
+                yAxisSuffix=""
+                yAxisInterval={1}
+                fromZero={false}
+                withInnerLines={true}
+                withOuterLines={true}
+                withVerticalLabels={true}
+                withHorizontalLabels={true}
+                chartConfig={{
+                  backgroundColor: colors.card,
+                  backgroundGradientFrom: colors.card,
+                  backgroundGradientTo: colors.cardDark,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  useShadowColorFromDataset: true,
+                  propsForBackgroundLines: { stroke: colors.border, strokeWidth: 0.5 },
+                  style: { borderRadius: 12 },
                 }}
-                key={suggestion.id}
-                style={styles.suggestionCard}
-              >
-                <suggestion.icon size={24} color={suggestion.color} />
-                <Text style={styles.suggestionText}>{suggestion.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                bezier
+                style={styles.chart}
+              />
+              <View style={styles.chartLegend}>
+                {chartData.legend.map((label, i) => (
+                  <View key={label} style={styles.chartLegendItem}>
+                    <View
+                      style={[
+                        styles.chartLegendDot,
+                        {
+                          backgroundColor:
+                            chartData.datasets[i]?.color(1) ?? colors.textSecondary,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.chartLegendLabel}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <View style={styles.chartPlaceholder}>
+              <Text style={styles.chartPlaceholderText}>
+                No price history yet. Use the wallet to build activity.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Activity */}
@@ -612,40 +665,60 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textAlign: 'center',
   },
-  suggestionsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  suggestionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
   },
-  suggestionsGrid: {
+  chartSection: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  chartHeader: {
     flexDirection: 'row',
-    marginHorizontal: -6,
-  },
-  suggestionCard: {
-    flex: 1,
-    backgroundColor: colors.card,
-    marginHorizontal: 6,
-    padding: 16,
-    borderRadius: 12,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    minHeight: 80,
+    marginBottom: 16,
   },
-  suggestionText: {
-    fontSize: 12,
+  chart: {
+    marginVertical: 0,
+    borderRadius: 12,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 12,
+  },
+  chartLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chartLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
+  },
+  chartLegendLabel: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  chartPlaceholder: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 24,
+    minHeight: chartHeight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartPlaceholderText: {
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 16,
   },
   activitySection: {
     paddingHorizontal: 20,

@@ -12,6 +12,7 @@ import getChainsConfig from '@/config/get-chains-config';
 import { Toaster } from 'sonner-native';
 import { colors } from '@/constants/colors';
 import { networkConfigs } from '@/config/networks';
+import { HistoricalPriceSync } from '@/components/HistoricalPriceSync';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -132,6 +133,7 @@ export default function RootLayout() {
         }}
       >
         <WalletProvider config={walletProviderConfig}>
+          <HistoricalPriceSync />
           <NavigationThemeProvider value={CustomDarkTheme}>
             <View style={{ flex: 1, backgroundColor: colors.background }}>
               <Stack
