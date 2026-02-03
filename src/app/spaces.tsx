@@ -1,6 +1,6 @@
 import Header from '@/components/header';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Box, Check, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Info } from 'lucide-react-native';
+import { AtSign, Check, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Info } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -1985,7 +1985,7 @@ export default function SpacesScreen() {
         {/* Spaces List Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Box size={20} color={colors.primary} />
+            <AtSign size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>My Spaces</Text>
           </View>
 

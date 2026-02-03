@@ -2,7 +2,7 @@ import { BalanceLoader } from '@/components/BalanceLoader';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { ArrowDownLeft, ArrowUpRight, Box, QrCode, Settings } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, AtSign, QrCode, Settings } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -22,7 +22,13 @@ import { LineChart } from 'react-native-chart-kit';
 import { AssetConfig, assetConfig } from '../config/assets';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
 import {
+  buildBtcDailyBalanceTable,
+  buildSaveAndReturnBtcDailyBalanceTable,
+  saveBtcDailyBalanceTable,
+} from '@/services/btc-daily-balance-storage';
+import {
   buildPriceChartData,
+  isSentByWalletUI,
   loadHistoricalPrices,
   onHistoricalPricesUpdated,
   type PriceChartData,
@@ -143,7 +149,7 @@ export default function WalletScreen() {
   const getTransactions = async () => {
     if (!walletTransactions) return [];
 
-    // Get the wallet's own addresses for comparison
+    // Same address list as balance replay (Object.values(addresses).map(addr => addr?.toLowerCase()))
     const walletAddresses = addresses
       ? Object.values(addresses).map(addr => addr?.toLowerCase())
       : [];
@@ -156,8 +162,7 @@ export default function WalletScreen() {
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 3)
         .map(async (tx, index) => {
-          const fromAddress = tx.from?.toLowerCase();
-          const isSent = walletAddresses.includes(fromAddress);
+          const isSent = isSentByWalletUI(tx.from, walletAddresses);
           const amount = parseFloat(tx.amount);
           const config = assetConfig[tx.token];
 
@@ -193,6 +198,38 @@ export default function WalletScreen() {
   const handleReceivePress = () => {
     router.push('/receive/select-token');
   };
+
+  const handleXautChartButtonPress = useCallback(() => {
+    const rawList = walletTransactions?.list ?? [];
+    const xautSymbol = assetConfig.xaut?.symbol ?? 'XAU₮';
+    const isXautTx = (tx: { token?: string }) => {
+      const t = (tx.token ?? '').toString();
+      const lower = t.toLowerCase();
+      return lower === 'xaut' || lower === 'xau' || lower.startsWith('xau') || t === xautSymbol;
+    };
+    const xautTxs = rawList.filter(isXautTx);
+    console.log('[XAU₮] transactions count:', xautTxs.length);
+    xautTxs.forEach((tx, i) => {
+      console.log('[XAU₮]', i + 1, tx);
+    });
+  }, [walletTransactions?.list]);
+
+  const handleBtcChartButtonPress = useCallback(async () => {
+    const rawList = walletTransactions?.list ?? [];
+    const txList = rawList.map((tx) => ({
+      timestamp: tx.timestamp,
+      token: tx.token,
+      amount: parseFloat(tx.amount) || 0,
+      from: tx.from ?? '',
+      to: (tx as { to?: string }).to ?? '',
+    }));
+    const walletAddresses = addresses ? Object.values(addresses).map((a) => a?.toLowerCase()) : [];
+    const table = await buildSaveAndReturnBtcDailyBalanceTable(txList, walletAddresses);
+    const sortedDates = Object.keys(table).sort();
+    for (const date of sortedDates) {
+      console.log(`${date} ${table[date]}`);
+    }
+  }, [walletTransactions?.list, addresses]);
 
   const handleQRPress = () => {
     router.push('/scan-qr');
@@ -242,11 +279,26 @@ export default function WalletScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletTransactions?.list, addresses]);
 
+  // Persist BTC daily balance table when transactions or addresses change (same address list as UI)
+  useEffect(() => {
+    const rawList = walletTransactions?.list ?? [];
+    const walletAddresses = addresses ? Object.values(addresses).map((a) => a?.toLowerCase()) : [];
+    if (rawList.length === 0 && walletAddresses.length === 0) return;
+    const txList = rawList.map((tx) => ({
+      timestamp: tx.timestamp,
+      token: tx.token,
+      amount: parseFloat(tx.amount) || 0,
+      from: tx.from ?? '',
+      to: (tx as { to?: string }).to ?? '',
+    }));
+    const table = buildBtcDailyBalanceTable(txList, walletAddresses);
+    saveBtcDailyBalanceTable(table).catch(() => {});
+  }, [walletTransactions?.list, addresses]);
+
   const loadChartData = useCallback(async () => {
     try {
       const stored = await loadHistoricalPrices();
-      console.log('[loadChartData] stored keys:', Object.keys(stored), 'btc points:', stored.btc?.data?.length ?? 0, 'xaut points:', stored.xaut?.data?.length ?? 0);
-      setChartData(buildPriceChartData(stored) ?? null);
+      setChartData(buildPriceChartData(stored, 80, ['btc']) ?? null);
     } catch {
       setChartData(null);
     }
@@ -254,7 +306,7 @@ export default function WalletScreen() {
 
   useEffect(() => {
     loadChartData();
-  }, [loadChartData, balances?.list, walletTransactions?.list]);
+  }, [loadChartData]);
 
   // Reload chart when historical price sync completes (so we don't stay on "No price history yet")
   useEffect(() => {
@@ -281,6 +333,19 @@ export default function WalletScreen() {
     });
   }, []);
 
+  const chartXAxisConfig = useMemo(() => {
+    const n = chartData?.labels?.length ?? 0;
+    const step = Math.max(1, Math.floor(n / 8));
+    const show = new Set<number>();
+    for (let i = 0; i < n; i += step) show.add(i);
+    if (n > 0) show.add(n - 1);
+    const hidePointsAtIndex = Array.from({ length: n }, (_, i) => i).filter((i) => !show.has(i));
+    return {
+      yAxisInterval: Math.max(1, step),
+      hidePointsAtIndex,
+    };
+  }, [chartData?.labels?.length]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -305,7 +370,7 @@ export default function WalletScreen() {
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerButtonFirst} onPress={handleSpacesPress}>
-            <Box size={24} color={colors.primary} />
+            <AtSign size={24} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton} onPress={handleSettingsPress}>
             <Settings size={24} color={colors.primary} />
@@ -422,21 +487,24 @@ export default function WalletScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* BTC & XAUT price line chart (last year) */}
+        {/* Last 100 days price chart */}
         <View style={styles.chartSection}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.sectionTitle}>BTC & XAUT (USD)</Text>
-          </View>
           {chartData && chartData.datasets.length > 0 ? (
             <>
-              <LineChart
+              <View style={[styles.chartWrapper, { width: chartWidth }]}>
+                <LineChart
                 data={chartData}
-                width={chartWidth}
+                width={chartWidth - 24}
                 height={chartHeight}
                 yAxisLabel="$"
                 yAxisSuffix=""
-                yAxisInterval={1}
+                segments={3}
+                yLabelsOffset={12}
+                yAxisInterval={chartXAxisConfig.yAxisInterval}
+                hidePointsAtIndex={chartXAxisConfig.hidePointsAtIndex}
+                xLabelsOffset={8}
                 fromZero={false}
+                withDots={false}
                 withInnerLines={true}
                 withOuterLines={true}
                 withVerticalLabels={true}
@@ -446,30 +514,19 @@ export default function WalletScreen() {
                   backgroundGradientFrom: colors.card,
                   backgroundGradientTo: colors.cardDark,
                   decimalPlaces: 0,
+                  formatYLabel: (value: string) =>
+                    `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
                   color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                   labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                   useShadowColorFromDataset: true,
+                  fillShadowGradientFromOpacity: 0.25,
+                  fillShadowGradientToOpacity: 0.25,
                   propsForBackgroundLines: { stroke: colors.border, strokeWidth: 0.5 },
                   style: { borderRadius: 12 },
                 }}
                 bezier
                 style={styles.chart}
               />
-              <View style={styles.chartLegend}>
-                {chartData.legend.map((label, i) => (
-                  <View key={label} style={styles.chartLegendItem}>
-                    <View
-                      style={[
-                        styles.chartLegendDot,
-                        {
-                          backgroundColor:
-                            chartData.datasets[i]?.color(1) ?? colors.textSecondary,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.chartLegendLabel}>{label}</Text>
-                  </View>
-                ))}
               </View>
             </>
           ) : (
@@ -479,6 +536,29 @@ export default function WalletScreen() {
               </Text>
             </View>
           )}
+          <View style={styles.chartSymbolButtons}>
+            <TouchableOpacity
+              style={styles.chartSymbolButton}
+              onPress={handleXautChartButtonPress}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.chartSymbolButtonText}>{assetConfig.xaut?.symbol ?? 'XAU₮'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.chartSymbolButton}
+              onPress={handleBtcChartButtonPress}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.chartSymbolButtonText}>{assetConfig.btc?.symbol ?? 'BTC'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.chartSymbolButton}
+              onPress={() => {}}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.chartSymbolButtonText}>{assetConfig.usat?.symbol ?? 'USA₮'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Activity */}
@@ -680,9 +760,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  chartWrapper: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    overflow: 'visible',
+  },
   chart: {
     marginVertical: 0,
     borderRadius: 12,
+    paddingRight: 52,
   },
   chartLegend: {
     flexDirection: 'row',
@@ -719,6 +806,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  chartSymbolButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 12,
+  },
+  chartSymbolButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.border,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chartSymbolButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
   },
   activitySection: {
     paddingHorizontal: 20,

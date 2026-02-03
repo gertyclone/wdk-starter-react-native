@@ -4,10 +4,9 @@ import { AssetTicker } from '@tetherto/wdk-react-native-provider';
 const STORAGE_KEY_EARLIEST_DATES = 'wdk_earliest_token_dates';
 const STORAGE_KEY_HISTORICAL_PRICES = 'wdk_historical_prices';
 const MAX_POINTS_PER_TOKEN = 200;
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** Don't request prices older than this (API limit is 365 days; use 300 for safety). */
-const MAX_REQUEST_DAYS_MS = 300 * 24 * 60 * 60 * 1000;
+/** Price history window: 100 days from today at midnight. */
+const CHART_DAYS_MS = 100 * DAY_MS;
 
 /** Midnight UTC (ms) for the day containing tsMs. */
 function dayMidnightMs(tsMs: number): number {
@@ -151,7 +150,7 @@ export async function saveHistoricalPrices(
 /**
  * Clear all historical price data from AsyncStorage (prices and earliest dates).
  * When EXPO_PUBLIC_CLEAR_PRICES is true, call this before sync so data is
- * reloaded from the API from 365 days ago.
+ * reloaded from the API (100 days from today at midnight).
  */
 export async function clearAllHistoricalPriceData(): Promise<void> {
   await AsyncStorage.multiRemove([
@@ -228,8 +227,7 @@ export async function syncHistoricalPrices(
 ): Promise<void> {
   const nowMs = Date.now();
   const todayMidnightMs = dayMidnightMs(nowMs);
-  const oneYearAgoMs = nowMs - ONE_YEAR_MS;
-  const requestCutoffMs = nowMs - MAX_REQUEST_DAYS_MS;
+  const chartStartMs = nowMs - CHART_DAYS_MS;
 
   const fromActivity = getEarliestDatesFromTransactions(transactions);
   const storedDates = await loadEarliestDates();
@@ -247,8 +245,8 @@ export async function syncHistoricalPrices(
 
   for (const ticker of HISTORICAL_PRICE_TOKENS) {
     const tokenKey = ticker.toLowerCase();
-    const earliestMs = mergedDates[tokenKey] ?? oneYearAgoMs;
-    const startMs = Math.max(earliestMs, requestCutoffMs);
+    const earliestMs = mergedDates[tokenKey] ?? chartStartMs;
+    const startMs = Math.max(earliestMs, chartStartMs);
     const existing = storedPrices[tokenKey]?.data ?? [];
 
     if (startMs >= todayMidnightMs + DAY_MS) continue;
@@ -289,14 +287,13 @@ export async function syncHistoricalPrices(
   notifyHistoricalPricesUpdated();
 }
 
-const ONE_YEAR_MS_EXPORT = 365 * 24 * 60 * 60 * 1000;
 
-/** Token display colors for chart lines (hex) */
+/** Token display colors for chart lines (hex); lighter values for better contrast on dark background */
 export const TOKEN_CHART_COLORS: Record<string, string> = {
-  btc: '#F7931A',
-  xaut: '#D4AF37',
-  usdt: '#26A17B',
-  usat: '#2775CA',
+  btc: '#FFB366',
+  xaut: '#E8C547',
+  usdt: '#4DB6AC',
+  usat: '#64B5F6',
 };
 
 export interface ChartDataset {
@@ -324,15 +321,186 @@ function toMs(ts: number): number {
 /** Token keys used for the price line chart (BTC and XAUT only). */
 const CHART_TOKEN_KEYS = ['btc', 'xaut'] as const;
 
-export function buildPriceChartData(
+/** Transaction shape for balance replay (timestamp in seconds or ms). */
+export interface TransactionForBalance {
+  timestamp: number;
+  token: string;
+  amount: number;
+  from?: string;
+  to?: string;
+}
+
+/**
+ * Same sent/received logic as the wallet UI (getTransactions): sent when from is one of our addresses.
+ * walletAddresses must be built the same way as the UI: Object.values(addresses).map(addr => addr?.toLowerCase()).
+ */
+export function isSentByWalletUI(
+  from: string | undefined,
+  walletAddresses: (string | undefined)[]
+): boolean {
+  const fromAddress = from?.toLowerCase();
+  return walletAddresses.includes(fromAddress);
+}
+
+/**
+ * Compute token balances (btc, xaut) as of endOfDayMs by replaying transactions chronologically.
+ * Uses the same balance logic as the wallet UI: isSentByWalletUI(tx.from, walletAddresses).
+ * Sent subtracts, received adds. walletAddresses must match UI (Object.values(addresses).map(addr => addr?.toLowerCase())).
+ */
+export function getBalanceAsOfTimestamp(
+  transactions: TransactionForBalance[],
+  walletAddresses: (string | undefined)[],
+  endOfDayMs: number
+): Record<string, number> {
+  const endMs = endOfDayMs < 1e12 ? endOfDayMs * 1000 : endOfDayMs;
+  const sorted = [...transactions].sort((a, b) => {
+    const ta = a.timestamp < 1e12 ? a.timestamp * 1000 : a.timestamp;
+    const tb = b.timestamp < 1e12 ? b.timestamp * 1000 : b.timestamp;
+    return ta - tb;
+  });
+  const balance: Record<string, number> = { btc: 0, xaut: 0 };
+  for (const tx of sorted) {
+    const tsMs = tx.timestamp < 1e12 ? tx.timestamp * 1000 : tx.timestamp;
+    if (tsMs > endMs) break;
+    const tokenKey = (tx.token ?? '').toLowerCase();
+    if (tokenKey !== 'btc' && tokenKey !== 'xaut') continue;
+    const amount = Number(tx.amount) || 0;
+    const isSent = isSentByWalletUI(tx.from, walletAddresses);
+    const current = balance[tokenKey] ?? 0;
+    if (amount < 0) {
+      balance[tokenKey] = current + amount;
+    } else {
+      balance[tokenKey] = current + (isSent ? -amount : amount);
+    }
+  }
+  return balance;
+}
+
+/**
+ * Build LineChart-ready data for portfolio value (USD) over time (BTC only).
+ * For each day: portfolio value = BTC price × BTC balance (as of end of that day).
+ * Days with no BTC holdings (portfolio value 0) are omitted from the chart.
+ */
+export function buildPortfolioValueChartData(
   stored: HistoricalPricesMap,
+  transactions: TransactionForBalance[],
+  walletAddresses: string[],
   maxPoints = 80
 ): PriceChartData | null {
-  const tokenKeys = CHART_TOKEN_KEYS.filter((k) => stored[k]?.data?.length);
+  const btcPoints = stored.btc?.data ?? [];
+  if (btcPoints.length === 0) return null;
+
+  const nowMs = Date.now();
+  const todayMidnightMs = Math.floor(nowMs / DAY_MS) * DAY_MS;
+  const chartStartMs = nowMs - CHART_DAYS_MS;
+  const uniqueTs = btcPoints
+    .map((p) => toMs(p.ts))
+    .filter((ts) => ts >= chartStartMs)
+    .sort((a, b) => a - b);
+  let uniqueTsDedup = Array.from(new Set(uniqueTs)).sort((a, b) => a - b);
+  const storedMinMs = uniqueTsDedup[0];
+  const storedMaxMs = uniqueTsDedup[uniqueTsDedup.length - 1];
+  console.log('[PortfolioChart] stored BTC price range:', storedMinMs != null ? new Date(storedMinMs).toISOString().slice(0, 10) : 'none', 'to', storedMaxMs != null ? new Date(storedMaxMs).toISOString().slice(0, 10) : 'none', 'today:', new Date(todayMidnightMs).toISOString().slice(0, 10));
+  if (storedMaxMs != null && storedMaxMs < todayMidnightMs) {
+    const missingDays: number[] = [];
+    for (let dayMs = storedMaxMs + DAY_MS; dayMs <= todayMidnightMs; dayMs += DAY_MS) {
+      missingDays.push(dayMs);
+    }
+    uniqueTsDedup = [...uniqueTsDedup, ...missingDays].sort((a, b) => a - b);
+    console.log('[PortfolioChart] extended timeline to today; added', missingDays.length, 'days (sync may not have fetched these yet)');
+  }
+  if (uniqueTsDedup.length === 0) return null;
+
+  const btcSorted = btcPoints
+    .map((p) => ({ ...p, tsMs: toMs(p.ts) }))
+    .filter((p) => p.tsMs >= chartStartMs)
+    .sort((a, b) => a.tsMs - b.tsMs);
+
+  const getPriceAt = (points: { tsMs: number; price: number }[], tsMs: number): number => {
+    if (points.length === 0) return 0;
+    let i = 0;
+    while (i < points.length && points[i].tsMs <= tsMs) i++;
+    if (i === 0) return points[0].price;
+    if (i >= points.length) return points[points.length - 1].price;
+    const a = points[i - 1];
+    const b = points[i];
+    const t = (tsMs - a.tsMs) / (b.tsMs - a.tsMs);
+    return a.price * (1 - t) + b.price * t;
+  };
+
+  const labels: string[] = [];
+  const portfolioValues: number[] = [];
+  let lastDrawnMs = 0;
+  for (const tsMs of uniqueTsDedup) {
+    const endOfDayMs = Math.floor(tsMs / DAY_MS) * DAY_MS + DAY_MS - 1;
+    const bal = getBalanceAsOfTimestamp(transactions, walletAddresses, endOfDayMs);
+    const btcBalance = bal.btc ?? 0;
+    if (btcBalance <= 0) continue;
+    const btcPrice = getPriceAt(btcSorted, tsMs);
+    const value = btcPrice * btcBalance;
+    if (value <= 0) continue;
+    const d = new Date(tsMs);
+    const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+    labels.push(dateStr);
+    portfolioValues.push(value);
+    lastDrawnMs = tsMs;
+    console.log('[PortfolioChart]', dateStr, 'BTC balance:', btcBalance, 'BTC price:', btcPrice, 'portfolio USD:', value);
+  }
+
+  if (portfolioValues.length === 0) return null;
+  const skippedAfterLast = uniqueTsDedup.filter((ts) => ts > lastDrawnMs).length;
+  console.log('[PortfolioChart] chart points:', labels.length, 'amounts (USD):', portfolioValues);
+  console.log('[PortfolioChart] last drawn date:', lastDrawnMs ? new Date(lastDrawnMs).toISOString().slice(0, 10) : 'none', skippedAfterLast > 0 ? `(${skippedAfterLast} days after that skipped: no BTC balance)` : '');
+
+  let sortedLabels: string[];
+  let sortedValues: number[];
+  if (portfolioValues.length <= maxPoints) {
+    sortedLabels = labels;
+    sortedValues = portfolioValues;
+  } else {
+    const step = (portfolioValues.length - 1) / (maxPoints - 1);
+    sortedLabels = [];
+    sortedValues = [];
+    for (let i = 0; i < maxPoints; i++) {
+      const idx = i === maxPoints - 1 ? portfolioValues.length - 1 : Math.round(i * step);
+      sortedLabels.push(labels[idx]);
+      sortedValues.push(portfolioValues[idx]);
+    }
+  }
+
+  if (sortedValues.length === 1) {
+    sortedLabels.push(sortedLabels[0]);
+    sortedValues.push(sortedValues[0]);
+  }
+
+  const hex = TOKEN_CHART_COLORS.btc ?? '#999';
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return {
+    labels: sortedLabels,
+    datasets: [
+      {
+        data: sortedValues,
+        color: (opacity = 1) => `rgba(${r},${g},${b},${opacity})`,
+        strokeWidth: 2,
+      },
+    ],
+    legend: ['Portfolio (USD)'],
+  };
+}
+
+export function buildPriceChartData(
+  stored: HistoricalPricesMap,
+  maxPoints = 80,
+  tokenFilter?: readonly string[]
+): PriceChartData | null {
+  const keys = tokenFilter ?? CHART_TOKEN_KEYS;
+  const tokenKeys = keys.filter((k) => stored[k]?.data?.length);
   if (tokenKeys.length === 0) return null;
 
   const nowMs = Date.now();
-  const oneYearAgoMs = nowMs - ONE_YEAR_MS_EXPORT;
+  const chartStartMs = nowMs - CHART_DAYS_MS;
   const allTs: number[] = [];
   for (const key of tokenKeys) {
     for (const p of stored[key].data) {
@@ -340,7 +508,9 @@ export function buildPriceChartData(
       allTs.push(tsMs);
     }
   }
-  const uniqueTs = Array.from(new Set(allTs)).sort((a, b) => a - b);
+  const uniqueTs = Array.from(new Set(allTs))
+    .filter((ts) => ts >= chartStartMs)
+    .sort((a, b) => a - b);
   if (uniqueTs.length === 0) return null;
 
   let sortedTs =
@@ -372,7 +542,7 @@ export function buildPriceChartData(
   for (const tokenKey of tokenKeys) {
     const rawPoints = stored[tokenKey].data
       .map((p) => ({ ...p, tsMs: toMs(p.ts) }))
-      .filter((p) => p.tsMs >= oneYearAgoMs)
+      .filter((p) => p.tsMs >= chartStartMs)
       .sort((a, b) => a.tsMs - b.tsMs);
     if (rawPoints.length === 0) continue;
 
@@ -394,7 +564,7 @@ export function buildPriceChartData(
     datasets.push({
       data,
       color: (opacity = 1) => `rgba(${r},${g},${b},${opacity})`,
-      strokeWidth: 2,
+      strokeWidth: 3,
     });
     legend.push(tokenKey.toUpperCase());
   }

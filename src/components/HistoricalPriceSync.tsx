@@ -17,7 +17,7 @@ const shouldClearPrices =
  * prices from that date to now (or appends new data since last launch), and
  * stores the series in AsyncStorage.
  * If EXPO_PUBLIC_CLEAR_PRICES is true, clears all stored historical data first
- * so it is reloaded from the API from 365 days ago.
+ * so it is reloaded from the API (100 days from today at midnight).
  */
 export function HistoricalPriceSync() {
   const { wallet, isUnlocked, transactions } = useWallet();

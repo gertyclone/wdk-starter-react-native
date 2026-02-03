@@ -10,6 +10,14 @@ import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
 
+/** Normalize provider token to assetConfig key (e.g. "XAU", "XAU₮" -> "xaut") so config lookup works. */
+function tokenToConfigKey(token: string | undefined): string {
+  const t = (token ?? '').toString().toLowerCase();
+  if (t === 'xaut' || t === 'xau' || t.startsWith('xau')) return 'xaut';
+  if (t === 'usat' || t === 'usa' || t.startsWith('usa')) return 'usat';
+  return t || '';
+}
+
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const { transactions: walletTransactions, addresses } = useWallet();
@@ -32,20 +40,22 @@ export default function ActivityScreen() {
           const fromAddress = tx.from?.toLowerCase();
           const isSent = walletAddresses.includes(fromAddress);
           const amount = parseFloat(tx.amount);
-          const config = assetConfig[tx.token as keyof typeof assetConfig];
+          const configKey = tokenToConfigKey(tx.token);
+          const config = assetConfig[configKey as keyof typeof assetConfig];
+          const assetTicker = (configKey || tx.token || '') as AssetTicker;
 
           // Calculate fiat amount using pricing service
           const fiatAmount = await pricingService.getFiatValue(
             amount,
-            tx.token as AssetTicker,
+            assetTicker,
             FiatCurrency.USD
           );
 
           return {
             id: `${tx.transactionHash}-${index}`,
             type: isSent ? ('sent' as const) : ('received' as const),
-            token: config?.name || tx.token.toUpperCase(),
-            amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
+            token: config?.name || (tx.token ?? '').toString().toUpperCase(),
+            amount: `${formatTokenAmount(amount, assetTicker)}`,
             fiatAmount: formatUSDValue(fiatAmount, false),
             fiatCurrency: FiatCurrency.USD,
             network: tx.blockchain,

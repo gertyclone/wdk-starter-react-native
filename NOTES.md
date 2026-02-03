@@ -1,5 +1,7 @@
 nvm use v22.21.1
 
+https://etherscan.io/address/0x9417D411f7Ad5DF3c81cc3379cB3124f692F8a79#tokentxns
+
 https://docs.wallet.tether.io/start-building/react-native-quickstart
 # #9B2A6B
 # #B45F90
